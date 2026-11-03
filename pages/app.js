@@ -161,6 +161,7 @@ function parseUsque(text){
  return d;
 }
 function enableOutputs(){
+ $("subQrArea")?.classList.remove("hidden");
  ["fmtNative","fmtClash","fmtShadowrocket","fmtSingbox","fmtVless"].forEach(id=>$(id).disabled=false);
  ["downloadOriginal","showNative","copyNative","downloadNative2"].forEach(id=>$(id).disabled=false);
 }
@@ -1030,7 +1031,7 @@ function buildClash(){
    throw new Error("自定义 IP 规则使用了地区/免费出口，但免费落地节点已关闭。请启用免费落地，或把目标改成 WARP / DIRECT。");
  }
  const a=[
-  `# ${o.profile} - Clash / Mihomo MASQUE v6.20 Source-Overview`,
+  `# ${o.profile} - Clash / Mihomo MASQUE v6.21 QR-Subscription`,
   "mixed-port: 7890","allow-lan: false","mode: rule","log-level: info","ipv6: true","unified-delay: true","tcp-concurrent: true","keep-alive-interval: 15","keep-alive-idle: 15"
  ];
  if(o.enableControllerApi){
@@ -1144,7 +1145,7 @@ pause
 
 function setFormat(fmt){
  if(!source)return;
- currentFormat=fmt;helperText="";
+ currentFormat=fmt;helperText="";resetSubQr();
  document.querySelectorAll(".format-card").forEach(x=>x.classList.remove("active"));
  ({native:"fmtNative",clash:"fmtClash",shadowrocket:"fmtShadowrocket",singbox:"fmtSingbox",vless:"fmtVless"}[fmt]&&$(({native:"fmtNative",clash:"fmtClash",shadowrocket:"fmtShadowrocket",singbox:"fmtSingbox",vless:"fmtVless"})[fmt]).classList.add("active"));
  $("downloadHelper").className="hidden";$("downloadVlessBat").className="hidden";$("runGuide").className="run-guide hidden";hideNotice();
@@ -1365,6 +1366,36 @@ $("fmtClash").addEventListener("click",()=>{try{setFormat("clash");toast(`Clash 
 $("fmtShadowrocket").addEventListener("click",()=>{try{setFormat("shadowrocket");toast(`Shadowrocket 配置已生成，共 ${connectionPairs().length} 个节点。`,"success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
 $("fmtSingbox").addEventListener("click",()=>{try{setFormat("singbox");toast("sing-box 兼容配置已生成。","success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
 $("fmtVless").addEventListener("click",()=>{try{setFormat("vless");toast("VLESS 本地桥接配置已生成。","success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
+function resetSubQr(){
+ $("subQrPanel")?.classList.add("hidden");
+ $("subQrError")?.classList.add("hidden");
+}
+async function makeSubQr(){
+ const btn=$("makeSubQr"),err=$("subQrError"),panel=$("subQrPanel");
+ const content=$("mainOutput").value;
+ err.classList.add("hidden");panel.classList.add("hidden");
+ if(!content){err.textContent="先注册或导入 config.json 生成配置，再生成二维码。";err.classList.remove("hidden");return;}
+ btn.disabled=true;btn.textContent="正在生成…";
+ try{
+  const res=await fetch("/api/sub",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({format:currentFormat,content})});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok||!data.url)throw new Error(data.message||`生成失败（HTTP ${res.status}）`);
+  const payload=currentFormat==="clash"?`clash://install-config?url=${encodeURIComponent(data.url)}`:data.url;
+  const qr=qrcode(0,"M");qr.addData(payload);qr.make();
+  $("subQrBox").innerHTML=qr.createSvgTag({cellSize:5,margin:10,scalable:true});
+  const link=$("subQrLink");link.href=data.url;link.textContent=data.url;
+  $("subQrTip").textContent=currentFormat==="clash"
+    ?"用 Clash Verge / FlClash 等客户端扫码会直接弹出导入订阅；也可以在手机上打开订阅链接下载文件再导入。"
+    :"用手机扫码或打开订阅链接即可下载这个配置文件，再导入对应客户端。链接 24 小时后自动失效。";
+  panel.classList.remove("hidden");
+ }catch(e){
+  err.textContent=String((e&&e.message)||e);
+  err.classList.remove("hidden");
+ }finally{
+  btn.disabled=false;btn.textContent="📱 扫码获取订阅（生成二维码）";
+ }
+}
+$("makeSubQr")?.addEventListener("click",makeSubQr);
 $("copyMain").addEventListener("click",()=>copyText($("mainOutput").value,$("copyMain")));
 $("downloadMain").addEventListener("click",()=>{
  if(currentFormat==="native")download("usque-config.json",$("mainOutput").value,"application/json");

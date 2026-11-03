@@ -4,11 +4,17 @@
   "main": "./src/worker.js",
   "compatibility_date": "2026-09-03",
   "workers_dev": true,
+  // 扫码获取订阅需要一个 KV 命名空间：先 `npx wrangler kv namespace create SUB_KV`，
+  // 再把下面注释改成实际 id 后取消注释（或在 Cloudflare 控制台给 Worker 绑定变量名 SUB_KV）。
+  // "kv_namespaces": [
+  //   { "binding": "SUB_KV", "id": "替换为你的KV命名空间ID" }
+  // ],
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
     "run_worker_first": [
-      "/api/*"
+      "/api/*",
+      "/sub/*"
     ]
   }
 }

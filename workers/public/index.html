@@ -6,12 +6,12 @@
   <meta name="color-scheme" content="dark">
   <meta name="description" content="Usque MASQUE 小白友好转换工具：网页一键注册并保存原生 config.json，再生成 Clash/Mihomo 智能分流；可选 US/JP/SG 等公开免费落地节点，并通过 WARP/MASQUE 中转连接。">
   <title>Usque MASQUE · 免费落地节点池</title>
-  <link rel="stylesheet" href="./style.css?v=620">
+  <link rel="stylesheet" href="./style.css?v=621">
 </head>
 <body>
 <main class="wrap pro-wrap">
   <header class="hero pro-hero">
-    <span class="badge">v6.20 · 节点来源总览 + 自定义源高亮</span>
+    <span class="badge">v6.21 · 扫码获取订阅 + 节点来源总览</span>
     <h1>Usque MASQUE → Clash 小白版</h1>
     <a 
 
@@ -763,6 +763,23 @@
       </div>
     </div>
 
+    <div id="subQrArea" class="sub-qr-area hidden">
+      <div class="row tight">
+        <button id="makeSubQr" type="button">📱 扫码获取订阅（生成二维码）</button>
+        <span class="sub-qr-hint">把当前格式的配置临时托管到本站（24 小时），手机扫码即可导入，不用手动传文件。</span>
+      </div>
+      <div id="subQrPanel" class="sub-qr-panel hidden">
+        <div id="subQrBox" class="sub-qr-box"></div>
+        <div class="sub-qr-side">
+          <p><b>订阅链接（24 小时内有效）：</b></p>
+          <p><a id="subQrLink" href="#" target="_blank" rel="noopener"></a></p>
+          <p class="sub-qr-warn">⚠️ 链接里包含你的 WARP 私钥，只扫自己的设备，不要外传、不要截图发群。过期后重新生成即可。</p>
+          <p id="subQrTip" class="sub-qr-tip"></p>
+        </div>
+      </div>
+      <p id="subQrError" class="sub-qr-error hidden"></p>
+    </div>
+
     <textarea id="mainOutput" readonly spellcheck="false"
       placeholder="先完成注册，或导入已有 config.json"></textarea>
 
@@ -779,7 +796,8 @@
 
 <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
 
-<script src="./usque-register.js?v=620"></script>
-<script src="./app.js?v=620"></script>
+<script src="./qrcode.js?v=621"></script>
+<script src="./usque-register.js?v=621"></script>
+<script src="./app.js?v=621"></script>
 </body>
 </html>

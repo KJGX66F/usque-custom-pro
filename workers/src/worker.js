@@ -2,7 +2,7 @@
  * Usque MASQUE Pro v6.7 - Cloudflare Workers edition
  *
  * Static frontend: Workers Static Assets (./public)
- * API routes: /api/health, /api/warp/register, /api/warp/enroll
+ * API routes: /api/health, /api/warp/register, /api/warp/enroll, /api/sub, /sub/:token
  *
  * Do not put secrets in this source file.
  */
@@ -220,6 +220,67 @@ async function relayEnroll(request) {
   );
 }
 
+// ---------- Hosted subscription (QR-code import) ----------
+// POST /api/sub {format, content} stores the generated config in KV
+// (binding name: SUB_KV) under an unguessable token for 24 hours and
+// returns a fetchable URL. GET /sub/<token> serves it to proxy clients.
+// The stored config contains the user's WARP private key, so the token
+// URL is a credential: never log it, never list keys, it expires by TTL.
+const SUB_TTL_SECONDS = 86400;
+const SUB_FORMATS = {
+  native: { type: "application/json; charset=UTF-8", filename: "usque-config.json" },
+  clash: { type: "text/yaml; charset=UTF-8", filename: "masque-clash-smart.yaml" },
+  shadowrocket: { type: "text/yaml; charset=UTF-8", filename: "masque-shadowrocket.yaml" },
+  singbox: { type: "application/json; charset=UTF-8", filename: "sing-box-usque.json" },
+  vless: { type: "text/plain; charset=UTF-8", filename: "usque-vless-local.txt" }
+};
+
+function subToken() {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function createSubscription(request, env) {
+  if (!env?.SUB_KV) {
+    return json({ message: "订阅托管未启用：请先在 Cloudflare 给本项目绑定 KV 命名空间，变量名必须为 SUB_KV（步骤见 README「扫码获取订阅」）。" }, 503);
+  }
+  if (!allowedSameOrigin(request)) return json({ message: "Origin 不被允许" }, 403);
+  const type = request.headers.get("Content-Type") || "";
+  if (!type.toLowerCase().includes("application/json")) return json({ message: "Content-Type 必须为 application/json" }, 400);
+  const text = await request.text();
+  if (text.length > 262144) return json({ message: "配置内容过大" }, 413);
+  let body;
+  try { body = JSON.parse(text || "{}"); } catch { return json({ message: "JSON 格式无效" }, 400); }
+  const meta = SUB_FORMATS[body.format];
+  const content = typeof body.content === "string" ? body.content : "";
+  if (!meta || !content || content.length > 200000) return json({ message: "format 或 content 无效" }, 400);
+  const token = subToken();
+  await env.SUB_KV.put(`sub:${token}`, content, {
+    expirationTtl: SUB_TTL_SECONDS,
+    metadata: { type: meta.type, filename: meta.filename }
+  });
+  const origin = new URL(request.url).origin;
+  return json({ ok: true, url: `${origin}/sub/${token}`, expiresInSeconds: SUB_TTL_SECONDS });
+}
+
+async function serveSubscription(request, env, token) {
+  if (!env?.SUB_KV) return new Response("Subscription hosting is not enabled.", { status: 503 });
+  if (!/^[a-f0-9]{48}$/.test(token)) return new Response("Not Found", { status: 404 });
+  const got = await env.SUB_KV.getWithMetadata(`sub:${token}`);
+  if (!got || !got.value) return new Response("Subscription not found or expired.", { status: 404 });
+  const meta = got.metadata || {};
+  return new Response(got.value, {
+    status: 200,
+    headers: {
+      "Content-Type": meta.type || "text/plain; charset=UTF-8",
+      "Content-Disposition": `inline; filename="${meta.filename || "subscription.txt"}"`,
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff"
+    }
+  });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -246,6 +307,20 @@ export default {
         return json({ message: "Method Not Allowed" }, 405, { "Allow": "POST" });
       }
       return relayEnroll(request);
+    }
+
+    if (url.pathname === "/api/sub") {
+      if (request.method !== "POST") {
+        return json({ message: "Method Not Allowed" }, 405, { "Allow": "POST" });
+      }
+      return createSubscription(request, env);
+    }
+
+    if (url.pathname.startsWith("/sub/")) {
+      if (request.method !== "GET") {
+        return json({ message: "Method Not Allowed" }, 405, { "Allow": "GET" });
+      }
+      return serveSubscription(request, env, url.pathname.slice(5));
     }
 
     // With assets.run_worker_first set to ["/api/*"], normal files are

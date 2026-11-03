@@ -1,4 +1,4 @@
-# Usque MASQUE Pro v6.7 — Cloudflare Workers 版
+# Usque MASQUE Pro v6.21 — Cloudflare Workers 版
 
 ## 目录
 
@@ -136,11 +136,21 @@ wrangler.jsonc
 
 名称只能使用 Cloudflare Worker 支持的项目命名格式。
 
+## 扫码订阅的 KV 绑定（可选，v6.21）
+
+面板「扫码获取订阅」需要一个 KV 命名空间临时存放生成的配置（24 小时自动过期）：
+
+```text
+npx wrangler kv namespace create SUB_KV
+```
+
+把得到的 id 填进 `wrangler.jsonc` 的 `kv_namespaces`（文件里已备好注释模板），或在 Cloudflare 控制台给 Worker 绑定变量名 `SUB_KV`，然后重新部署。不绑定的话扫码按钮会提示未启用，其它功能不受影响。
+
 ## 安全
 
-- Worker API 只代理固定的 WARP 注册 / enroll 路径。
+- Worker API 只代理固定的 WARP 注册 / enroll 路径，以及同源的订阅托管路径（`/api/sub`、`/sub/:token`）。
 - 页面请求要求 same-origin。
 - 注册意图需要 `X-Usque-Intent: single-register`。
 - 请求体大小有限制。
 - 静态文件 `_headers` 继续生效。
-- 不使用 KV / D1 / R2 保存 Usque 私钥。
+- 不使用 KV / D1 / R2 保存 Usque 私钥；唯一例外是用户主动点「扫码获取订阅」时，把生成好的配置临时存入自己绑定的 KV，24 小时自动过期。
