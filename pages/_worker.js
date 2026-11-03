@@ -219,7 +219,8 @@ async function relayEnroll(request) {
 // old link dies immediately) and revocation (/api/sub/revoke).
 // GET /sub/<token> serves it to proxy clients. The stored config contains
 // the user's WARP private key, so the token URL is a credential: never
-// log it, never list keys.
+// log it; the only listing is the owner-key-gated /api/sub/list,
+// which returns metadata (tier / filename / expiry), never contents.
 const SUB_TIERS = { "24h": 86400, "7d": 604800, "perm": 0 };
 const SUB_FORMATS = {
   native: { type: "application/json; charset=UTF-8", filename: "usque-config.json" },
@@ -354,6 +355,31 @@ async function revokeSubscription(request, env) {
   return json({ ok: true });
 }
 
+// Deployer-only overview of issued subscriptions (P1): metadata only,
+// never the stored config contents. Deliberately gated behind
+// SUB_OWNER_KEY — without an owner key there is no safe way to tell the
+// deployer from any visitor, so listing stays disabled (403) until the
+// deployer sets one.
+async function listSubscriptions(request, env) {
+  const missing = subKvMissing(env); if (missing) return missing;
+  if (!allowedSameOrigin(request)) return json({ message: "Origin 不被允许" }, 403);
+  if (!env?.SUB_OWNER_KEY) {
+    return json({ message: "查看全部订阅需要部署者先设置 SUB_OWNER_KEY（否则任何访客都能列出全部订阅链接）。设置方法见 README「公开部署保护」。" , code: "owner_key_not_set" }, 403);
+  }
+  if (!ownerKeyOk(request, env)) return ownerRequired();
+  const listed = await env.SUB_KV.list({ prefix: "sub:", limit: 200 });
+  const subscriptions = (listed.keys || []).map((k) => ({
+    token: k.name.slice(4),
+    tier: (k.metadata || {}).tier || "24h",
+    filename: (k.metadata || {}).filename || "",
+    expiresAt: k.expiration ? new Date(k.expiration * 1000).toISOString() : null
+  }));
+  subscriptions.sort((a, b) =>
+    (a.tier === "perm" ? 0 : 1) - (b.tier === "perm" ? 0 : 1) ||
+    String(a.expiresAt || "9999").localeCompare(String(b.expiresAt || "9999")));
+  return json({ ok: true, subscriptions, truncated: listed.list_complete === false });
+}
+
 async function serveSubscription(request, env, token) {
   if (!env?.SUB_KV) return new Response("Subscription hosting is not enabled.", { status: 503 });
   if (!/^[a-f0-9]{48}$/.test(token)) return new Response("Not Found", { status: 404 });
@@ -403,6 +429,13 @@ export default {
         return json({ message: "Method Not Allowed" }, 405, { "Allow": "POST" });
       }
       return createSubscription(request, env);
+    }
+
+    if (url.pathname === "/api/sub/list") {
+      if (request.method !== "GET") {
+        return json({ message: "Method Not Allowed" }, 405, { "Allow": "GET" });
+      }
+      return listSubscriptions(request, env);
     }
 
     if (url.pathname === "/api/sub/update" || url.pathname === "/api/sub/rotate" || url.pathname === "/api/sub/revoke") {

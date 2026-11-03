@@ -19,6 +19,7 @@ const ENDPOINTS={
   bestcf1:"masque1.bestcf.eu.cc",
   bestcf2:"masque2.bestcf.eu.cc"
 };
+let remoteCuratedPairs=null,remoteTestPairs=null,remoteH2Prefixes=null;
 const DNS_PRESETS={
   "cf-google-dual":["1.1.1.1","8.8.8.8","2606:4700:4700::1111","2001:4860:4860::8888"],
   "cf-dual":["1.1.1.1","1.0.0.1","2606:4700:4700::1111","2606:4700:4700::1001"],
@@ -231,6 +232,11 @@ function portList(){
  return [Number(p)||443];
 }
 function curatedPairs(){
+ if(remoteCuratedPairs&&remoteCuratedPairs.length){
+  const rp=remoteCuratedPairs.map(p=>[String(p[0]),Number(p[1])]);
+  if($("includeTestEndpoints").checked&&(remoteTestPairs||[]).length)rp.push(...remoteTestPairs.map(p=>[String(p[0]),Number(p[1])]));
+  return rp;
+ }
  const pairs=[
   ["162.159.198.1",443],
   ["162.159.198.1",500],
@@ -303,7 +309,7 @@ function expandedPortList(){
 function h2Ipv4Endpoints(limit=508){
  const out=[];
  // warpscout currently treats these two /24s as the H2 IPv4 pool.
- for(const prefix of ["162.159.198","162.159.199"]){
+ for(const prefix of (remoteH2Prefixes&&remoteH2Prefixes.length?remoteH2Prefixes:["162.159.198","162.159.199"])){
    for(let host=1;host<=254;host++){
      out.push(`${prefix}.${host}`);
      if(out.length>=limit)return out;
@@ -429,6 +435,7 @@ function opts(){
   customIpEnabled:$("customIpRoutingEnabled")?.checked||false,
   customIpRules:customParsed.rules,
   customIpErrors:customParsed.errors,
+  chain:parseChainProxy(),
   profile:$("profileName").value.trim()||"MASQUE-Pro"
  };
 }
@@ -837,6 +844,7 @@ function clashGroupsAndRules(names,o){
  a.push("    proxies:",'      - "♻️ 自动选择"','      - "🛡️ 故障转移"','      - "⚖️ 负载均衡"');
  if(freeOn)appendCountryChoices(a,o);
  if(freeOn)a.push('      - "🌍 免费落地可手动"');
+ if(o.chain)a.push('      - "⛓ 链式出口"');
  a.push('      - "🌎 WARP可手动"','      - "🚀 WARP自动"',"      - DIRECT");
 
  groupHeader(a,"🎯 全球直连");
@@ -1046,6 +1054,12 @@ function buildClash(){
   "","proxies:"
  );
  pairs.forEach(([server,port],i)=>{const n=nodeName(server,port,i);names.push(n);makeNode(a,n,server,port,o)});
+ if(o.chain){
+  a.push(`  - name: "⛓ 链式出口"`,`    type: ${o.chain.type}`,`    server: ${q(o.chain.host)}`,`    port: ${o.chain.port}`);
+  if(o.chain.user)a.push(`    username: ${q(o.chain.user)}`);
+  if(o.chain.pass)a.push(`    password: ${q(o.chain.pass)}`);
+  a.push('    dialer-proxy: "WARP中转"');
+ }
  appendFreeProviders(a,o);
  a.push(...clashGroupsAndRules(names,o));
  return a.join("\n");
@@ -1366,6 +1380,143 @@ $("fmtClash").addEventListener("click",()=>{try{setFormat("clash");toast(`Clash 
 $("fmtShadowrocket").addEventListener("click",()=>{try{setFormat("shadowrocket");toast(`Shadowrocket 配置已生成，共 ${connectionPairs().length} 个节点。`,"success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
 $("fmtSingbox").addEventListener("click",()=>{try{setFormat("singbox");toast("sing-box 兼容配置已生成。","success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
 $("fmtVless").addEventListener("click",()=>{try{setFormat("vless");toast("VLESS 本地桥接配置已生成。","success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
+async function subApiGet(path,retry=true){
+ const headers={};const ownerKey=loadSubOwnerKey();
+ if(ownerKey)headers["X-Sub-Owner"]=ownerKey;
+ const res=await fetch(path,{method:"GET",headers});
+ const data=await res.json().catch(()=>({}));
+ if(res.status===403&&data.code==="owner_required"){
+  if(retry){
+   const entered=prompt("此操作仅部署者可用。请输入部署者口令（部署者在 Cloudflare 里设置的 SUB_OWNER_KEY；只保存在你这台浏览器里）：");
+   if(entered&&entered.trim()){saveSubOwnerKey(entered.trim());return subApiGet(path,false);}
+   throw new Error("已取消输入部署者口令。");
+  }
+  saveSubOwnerKey(null);
+  throw new Error(data.message||"部署者口令不正确。");
+ }
+ if(!res.ok)throw new Error(data.message||`操作失败（HTTP ${res.status}）`);
+ return data;
+}
+function renderSubImportLinks(url){
+ const row=$("subImportRow");if(!row)return;
+ const name=encodeURIComponent("MASQUE-Pro 订阅");
+ const b64=btoa(url);
+ const set=(id,href,show)=>{const el=$(id);if(!el)return;el.classList.toggle("hidden",!show);if(show)el.href=href;};
+ set("importClash",`clash://install-config?url=${encodeURIComponent(url)}#${name}`,currentFormat==="clash");
+ set("importShadowrocket",`sub://${b64}`,currentFormat==="clash"||currentFormat==="shadowrocket");
+ set("importSingbox",`sing-box://import-remote-profile?url=${encodeURIComponent(url)}#${name}`,currentFormat==="singbox");
+ set("importV2rayNG",`v2rayng://install-sub/?url=${encodeURIComponent(b64)}`,currentFormat==="clash");
+ row.classList.toggle("hidden",!(currentFormat==="clash"||currentFormat==="shadowrocket"||currentFormat==="singbox"));
+}
+function restoreMsg(t,err){const m=$("permRestoreMsg");if(!m)return;m.textContent=t;m.style.color=err?"#ff9c9c":"";m.classList.remove("hidden");}
+$("permRestoreBtn")?.addEventListener("click",async()=>{
+ const raw=($("permRestoreInput")?.value||"").trim();
+ const m=raw.match(/[a-f0-9]{48}/);
+ if(!m){restoreMsg("没识别出令牌：请粘贴完整的常驻订阅链接（…/sub/ 后面是 48 位令牌）。",true);return;}
+ const token=m[0];
+ try{
+  const res=await fetch(permSubUrl(token),{method:"GET"});
+  if(res.status===404){restoreMsg("这条链接在服务器上不存在，或已过期 / 已被吊销。",true);return;}
+  if(!res.ok){restoreMsg(`校验失败（HTTP ${res.status}）。`,true);return;}
+  if(res.headers.get("profile-update-interval")!=="24"){restoreMsg("这条链接不是常驻订阅（可能是 24 小时 / 7 天链接），不能恢复管理。",true);return;}
+ }catch(e){restoreMsg("校验请求失败："+String((e&&e.message)||e),true);return;}
+ savePermSub({token,format:"clash"});
+ renderPermSubBox();
+ restoreMsg("已恢复管理：下方「我的常驻订阅」里可以更新、轮换、删除这条链接了。");
+});
+async function refreshSubList(){
+ const box=$("subListBox"),hint=$("subListHint");
+ if(!box||!hint)return;
+ try{
+  const data=await subApiGet("/api/sub/list");
+  const subs=data.subscriptions||[];
+  hint.textContent=`共 ${subs.length} 条${data.truncated?"（只显示前 200 条）":""}`;
+  box.innerHTML="";
+  if(!subs.length)box.innerHTML="<p class='sub-list-empty'>还没有任何已发订阅。</p>";
+  for(const s of subs){
+   const row=document.createElement("div");row.className="sub-list-row";
+   const tierLabel=s.tier==="perm"?"常驻":s.tier==="7d"?"7 天":"24 小时";
+   const exp=s.tier==="perm"?"长期有效":("到期："+new Date(s.expiresAt).toLocaleString());
+   const info=document.createElement("span");
+   info.textContent=`${tierLabel} · ${s.filename||""} · ${exp} · …${String(s.token).slice(-6)}`;
+   const copy=document.createElement("button");copy.type="button";copy.textContent="复制链接";
+   copy.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(permSubUrl(s.token));copy.textContent="已复制";setTimeout(()=>{copy.textContent="复制链接";},1500);}catch{}});
+   const revoke=document.createElement("button");revoke.type="button";revoke.textContent="吊销";
+   revoke.addEventListener("click",async()=>{
+    if(!confirm("确定吊销这条订阅？吊销后链接立即失效。"))return;
+    try{
+     await subApi("/api/sub/revoke",{token:s.token});
+     if(loadPermSub()?.token===s.token){savePermSub(null);renderPermSubBox();}
+     refreshSubList();
+    }catch(e){hint.textContent=String((e&&e.message)||e);}
+   });
+   row.append(info,copy,revoke);box.appendChild(row);
+  }
+  box.classList.remove("hidden");
+ }catch(e){
+  hint.textContent=String((e&&e.message)||e);
+  box.classList.add("hidden");
+ }
+}
+$("subListBtn")?.addEventListener("click",refreshSubList);
+
+const ACCOUNTS_KEY="usque.accounts.v1";
+function loadAccounts(){try{const v=JSON.parse(localStorage.getItem(ACCOUNTS_KEY)||"[]");return Array.isArray(v)?v:[];}catch{return[];}}
+function saveAccounts(list){try{localStorage.setItem(ACCOUNTS_KEY,JSON.stringify(list));}catch{}}
+function accountLabel(a){const d=a.savedAt?new Date(a.savedAt).toLocaleString():"";return `${String(a.id||"账户").slice(0,10)}… · ${d}`;}
+function renderAccounts(){
+ const sel=$("accountSelect");if(!sel)return;
+ const list=loadAccounts();const cur=sel.value;
+ sel.innerHTML="";
+ if(!list.length){const op=document.createElement("option");op.value="";op.textContent="（暂无保存的账户）";sel.appendChild(op);return;}
+ list.forEach((a,i)=>{const op=document.createElement("option");op.value=String(i);op.textContent=accountLabel(a);sel.appendChild(op);});
+ if(cur&&list[Number(cur)])sel.value=cur;
+}
+function accountMsg(t,err){const m=$("accountMsg");if(!m)return;m.textContent=t;m.style.color=err?"#ff9c9c":"";m.classList.remove("hidden");}
+$("accountSave")?.addEventListener("click",()=>{
+ if(!source||!sourceText){accountMsg("先注册或导入一个 config.json，再存入账户库。",true);return;}
+ const list=loadAccounts().filter(a=>a.id!==source.id);
+ list.unshift({id:source.id||"",savedAt:new Date().toISOString(),text:sourceText});
+ const kept=list.slice(0,20);
+ saveAccounts(kept);renderAccounts();
+ accountMsg(`已存入账户库（共 ${kept.length} 个）。`);
+});
+$("accountSwitch")?.addEventListener("click",()=>{
+ const list=loadAccounts();const a=list[Number($("accountSelect")?.value)];
+ if(!a){accountMsg("先在列表里选一个账户。",true);return;}
+ try{loadSource(a.text,"账户库中的账户");accountMsg("已切换到所选账户。");}catch(e){accountMsg("切换失败："+String((e&&e.message)||e),true);}
+});
+$("accountDelete")?.addEventListener("click",()=>{
+ const list=loadAccounts();const i=Number($("accountSelect")?.value);
+ if(!list[i]){accountMsg("先在列表里选一个账户。",true);return;}
+ list.splice(i,1);saveAccounts(list);renderAccounts();accountMsg("已删除所选账户。");
+});
+
+function parseChainProxy(){
+ if(!$("chainEnabled")?.checked)return null;
+ const host=($("chainHost")?.value||"").trim();
+ const port=Number($("chainPort")?.value)||0;
+ if(!host||!port)return null;
+ return {type:$("chainType")?.value==="socks5"?"socks5":"http",host,port,user:($("chainUser")?.value||"").trim(),pass:$("chainPass")?.value||""};
+}
+function setPoolStatus(remote,updatedAt){
+ const el=$("poolStatus");if(!el)return;
+ el.textContent=remote?`端点池：远程清单${updatedAt?`（更新于 ${updatedAt}）`:""}，已覆盖内置池。`:"端点池：内置（远程清单读取失败或尚未发布，已自动回退）。";
+}
+async function loadRemotePool(){
+ try{
+  const res=await fetch(`https://raw.githubusercontent.com/KJGX66F/usque-custom-pro/main/endpoints.json?t=${Date.now()}`,{cache:"no-store"});
+  if(!res.ok)throw new Error("HTTP "+res.status);
+  const data=await res.json();
+  if(data&&data.endpoints)for(const k of Object.keys(ENDPOINTS))if(typeof data.endpoints[k]==="string"&&data.endpoints[k])ENDPOINTS[k]=data.endpoints[k];
+  if(data&&Array.isArray(data.curatedPairs)&&data.curatedPairs.length)remoteCuratedPairs=data.curatedPairs;
+  if(data&&Array.isArray(data.testPairs))remoteTestPairs=data.testPairs;
+  if(data&&Array.isArray(data.h2Prefixes)&&data.h2Prefixes.length)remoteH2Prefixes=data.h2Prefixes.map(String);
+  setPoolStatus(true,data&&data.updatedAt);
+  updateEstimate();
+ }catch{setPoolStatus(false);}
+}
+
 function resetSubQr(){
  $("subQrPanel")?.classList.add("hidden");
  $("subQrError")?.classList.add("hidden");
@@ -1405,6 +1556,7 @@ function showSubQr(url,tier){
    :"用手机扫码或打开订阅链接即可下载这个配置文件，再导入对应客户端。";
  $("subQrTip").textContent=base+(tier==="perm"?" 这是常驻链接：以后换配置在下方「我的常驻订阅」点「更新为当前配置」即可，链接和二维码都不变。":tier==="7d"?" 链接 7 天后自动失效。":" 链接 24 小时后自动失效。");
  $("subQrPanel").classList.remove("hidden");
+ renderSubImportLinks(url);
 }
 const SUB_OWNER_KEY_LS="usque.subOwnerKey";
 function loadSubOwnerKey(){try{return localStorage.getItem(SUB_OWNER_KEY_LS)||"";}catch{return "";}}
@@ -1525,5 +1677,5 @@ $("downloadEgressConfig").addEventListener("click",()=>{
   download("warp-egress-preference.json",JSON.stringify(egressPreferences(),null,2),"application/json");
 });
 
-resetRecommended();syncConditional();updateEstimate();updateFreeEgressHint();updateCustomIpRoutingHint();setSettingsState("clean","当前设置已应用");
+resetRecommended();syncConditional();loadRemotePool();renderAccounts();updateEstimate();updateFreeEgressHint();updateCustomIpRoutingHint();setSettingsState("clean","当前设置已应用");
 })();

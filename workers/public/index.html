@@ -11,7 +11,7 @@
 <body>
 <main class="wrap pro-wrap">
   <header class="hero pro-hero">
-    <span class="badge">v6.24 · 公开部署保护：常驻口令 + 频率限制</span>
+    <span class="badge">v6.25 · P1 功能包：账户库 / 订阅管理 / 一键导入 / 端点池清单 / 链式出口</span>
     <h1>Usque MASQUE → Clash 小白版</h1>
     <a 
 
@@ -105,6 +105,18 @@
       <span class="file-pill" id="filePill">JSON</span>
       <div id="loadedFile" class="loaded-file hidden"></div>
     </label>
+
+    <div class="accounts-box">
+      <div class="row tight">
+        <b>🗂 账户库</b>
+        <select id="accountSelect"><option value="">（暂无保存的账户）</option></select>
+        <button id="accountSwitch" type="button">切换到所选账户</button>
+        <button id="accountSave" type="button">存入当前账户</button>
+        <button id="accountDelete" type="button">删除所选</button>
+      </div>
+      <p class="accounts-note">注册过多个 WARP 账户时可以都存进这里，一键切换，不用反复导入文件。账户（含私钥）只保存在这台浏览器本地，公用电脑上不要存。</p>
+      <p id="accountMsg" class="accounts-note hidden"></p>
+    </div>
 
     <div class="source-actions">
       <button id="showNative" disabled>查看原生 JSON</button>
@@ -708,6 +720,21 @@
     </div>
     </details>
 
+    <div class="chain-box">
+      <h4>⛓ 链式出口（可选）</h4>
+      <p class="chain-note">让流量先过 WARP、再从你指定的二级代理出去（WARP → 二级代理 → 目标网站）。常见用法：填 Opera 浏览器代理的凭据，或你本机在跑的 opera-proxy 地址，落地就多一个 Opera 出口可选。仅 Clash / Mihomo 格式生效，生成的节点在「🚀 节点选择」里多一个「⛓ 链式出口」。</p>
+      <div class="settings-grid">
+        <label class="switch-pro"><input id="chainEnabled" type="checkbox"><span>启用链式出口</span></label>
+        <label><span>二级代理协议</span><select id="chainType"><option value="http">HTTP</option><option value="socks5">SOCKS5</option></select></label>
+        <label><span>二级代理地址</span><input id="chainHost" placeholder="如 127.0.0.1 或代理域名"></label>
+        <label><span>二级代理端口</span><input id="chainPort" type="number" placeholder="如 18080"></label>
+        <label><span>账号（没有可留空）</span><input id="chainUser"></label>
+        <label><span>密码（没有可留空）</span><input id="chainPass" type="password"></label>
+      </div>
+    </div>
+
+    <p id="poolStatus" class="pool-status">端点池：内置（正在尝试读取远程清单…）</p>
+
     <div id="nodeEstimate" class="estimate">预计生成：13 个节点</div>
 
     <div class="row">
@@ -784,6 +811,13 @@
           <p><a id="subQrLink" href="#" target="_blank" rel="noopener"></a></p>
           <p class="sub-qr-warn">⚠️ 链接里包含你的 WARP 私钥，只扫自己的设备，不要外传、不要截图发群。</p>
           <p id="subQrTip" class="sub-qr-tip"></p>
+          <div id="subImportRow" class="row tight hidden">
+            <span>一键导入到客户端：</span>
+            <a id="importClash" class="hidden" href="#">Clash / Mihomo</a>
+            <a id="importShadowrocket" class="hidden" href="#">Shadowrocket</a>
+            <a id="importSingbox" class="hidden" href="#">sing-box</a>
+            <a id="importV2rayNG" class="hidden" href="#">v2rayNG</a>
+          </div>
         </div>
       </div>
       <p id="subQrError" class="sub-qr-error hidden"></p>
@@ -798,6 +832,21 @@
         <p class="perm-sub-note">常驻链接长期有效且包含私钥：不要外传；怀疑泄露就点「轮换链接」，旧链接立刻作废、新链接要重新导入一次。</p>
         <p id="permSubMsg" class="perm-sub-msg hidden"></p>
       </div>
+    </div>
+
+    <div id="subManageBox" class="sub-manage-box">
+      <p><b>🔑 恢复常驻订阅管理</b>（换了浏览器 / 设备时：在这里粘贴你以前的常驻订阅链接，就能继续更新、轮换、删除它）</p>
+      <div class="row tight">
+        <input id="permRestoreInput" type="text" placeholder="粘贴常驻订阅链接（…/sub/…）">
+        <button id="permRestoreBtn" type="button">恢复管理</button>
+      </div>
+      <p id="permRestoreMsg" class="perm-sub-msg hidden"></p>
+      <p><b>📋 全部已发订阅</b>（仅部署者：需要先在 Cloudflare 设置 SUB_OWNER_KEY 才能查看）</p>
+      <div class="row tight">
+        <button id="subListBtn" type="button">查看全部已发订阅</button>
+        <span id="subListHint" class="sub-qr-hint"></span>
+      </div>
+      <div id="subListBox" class="sub-list-box hidden"></div>
     </div>
 
     <textarea id="mainOutput" readonly spellcheck="false"
@@ -818,6 +867,6 @@
 
 <script src="./qrcode.js?v=621"></script>
 <script src="./usque-register.js?v=621"></script>
-<script src="./app.js?v=624"></script>
+<script src="./app.js?v=625"></script>
 </body>
 </html>

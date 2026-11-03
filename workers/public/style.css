@@ -277,6 +277,15 @@ footer{text-align:center;color:#67859a;font-size:12px;padding-top:22px}
 .sub-qr-warn{color:#ffb86b}
 .sub-qr-error{color:#ff9c9c;margin-top:10px}
 .sub-native-warn{margin-top:10px;padding:10px 12px;border:1.5px solid #e8a13a;border-radius:10px;background:rgba(232,161,58,.12);color:#ffd9a0;font-size:13.5px;line-height:1.6}
+.accounts-box,.sub-manage-box,.chain-box{margin-top:14px;border:1px solid #2c5069;border-radius:10px;padding:12px 14px;background:rgba(4,20,29,.3)}
+.accounts-box select{max-width:280px}
+.accounts-note,.chain-note{color:#9fb6c6;font-size:13px;line-height:1.6}
+.chain-box h4{margin:2px 0 6px}
+#permRestoreInput{flex:1;min-width:220px}
+.sub-list-box{margin-top:8px}
+.sub-list-row{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px dashed #2c5069;flex-wrap:wrap}
+.sub-list-empty{color:#9fb6c6}
+.pool-status{color:#9fb6c6;font-size:13px;margin:10px 0 0}
 .perm-sub-box{margin-top:12px;border:1.5px dashed #2f7fd0;border-radius:10px;padding:12px;background:rgba(47,127,208,.08)}
 .perm-sub-box p{margin:5px 0;word-break:break-all}
 .perm-sub-note{color:#9fb6c6;font-size:13px}
