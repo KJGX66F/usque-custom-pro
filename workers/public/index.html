@@ -11,7 +11,7 @@
 <body>
 <main class="wrap pro-wrap">
   <header class="hero pro-hero">
-    <span class="badge">v6.22 · 订阅可选常驻 + 轮换吊销</span>
+    <span class="badge">v6.23 · 原生格式订阅防呆提示</span>
     <h1>Usque MASQUE → Clash 小白版</h1>
     <a 
 
@@ -776,6 +776,7 @@
           <option value="perm">常驻（长期有效，可更新内容、可轮换吊销）</option>
         </select>
       </div>
+      <p id="subNativeWarn" class="sub-native-warn hidden">⚠️ 当前是「原生 Usque config.json」格式：生成的订阅链接是 JSON 文件，Clash Verge / FlClash 等客户端<b>无法直接导入</b>（会报导入失败）。要在客户端用订阅，请先切换到 <b>Clash / Mihomo</b> 格式再生成。</p>
       <div id="subQrPanel" class="sub-qr-panel hidden">
         <div id="subQrBox" class="sub-qr-box"></div>
         <div class="sub-qr-side">
@@ -817,6 +818,6 @@
 
 <script src="./qrcode.js?v=621"></script>
 <script src="./usque-register.js?v=621"></script>
-<script src="./app.js?v=622"></script>
+<script src="./app.js?v=623"></script>
 </body>
 </html>

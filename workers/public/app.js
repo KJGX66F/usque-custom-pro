@@ -1145,7 +1145,7 @@ pause
 
 function setFormat(fmt){
  if(!source)return;
- currentFormat=fmt;helperText="";resetSubQr();
+ currentFormat=fmt;helperText="";resetSubQr();updateSubNativeWarn();
  document.querySelectorAll(".format-card").forEach(x=>x.classList.remove("active"));
  ({native:"fmtNative",clash:"fmtClash",shadowrocket:"fmtShadowrocket",singbox:"fmtSingbox",vless:"fmtVless"}[fmt]&&$(({native:"fmtNative",clash:"fmtClash",shadowrocket:"fmtShadowrocket",singbox:"fmtSingbox",vless:"fmtVless"})[fmt]).classList.add("active"));
  $("downloadHelper").className="hidden";$("downloadVlessBat").className="hidden";$("runGuide").className="run-guide hidden";hideNotice();
@@ -1386,6 +1386,12 @@ function permMsg(text,isError){
  const m=$("permSubMsg");if(!m)return;
  m.textContent=text;m.style.color=isError?"#ff9c9c":"";m.classList.remove("hidden");
 }
+function updateSubNativeWarn(){
+ const w=$("subNativeWarn");if(w)w.classList.toggle("hidden",currentFormat!=="native");
+}
+function nativeSubConfirm(){
+ return confirm("当前是「原生 Usque config.json」格式：生成的订阅链接是 JSON 文件，Clash Verge / FlClash 等客户端无法直接导入（会报导入失败）。\n\n建议点「取消」，先切换到 Clash / Mihomo 格式再生成。仍要继续吗？");
+}
 function showSubQr(url,tier){
  const payload=currentFormat==="clash"?`clash://install-config?url=${encodeURIComponent(url)}`:url;
  const qr=qrcode(0,"M");qr.addData(payload);qr.make();
@@ -1394,6 +1400,8 @@ function showSubQr(url,tier){
  $("subQrValidity").textContent=tier==="perm"?"订阅链接（常驻，长期有效）：":tier==="7d"?"订阅链接（7 天内有效）：":"订阅链接（24 小时内有效）：";
  const base=currentFormat==="clash"
    ?"用 Clash Verge / FlClash 等客户端扫码会直接弹出导入订阅；也可以在手机上打开订阅链接下载文件再导入。"
+   :currentFormat==="native"
+   ?"注意：这是原生 config.json 文件的链接，只能下载后在本工具中导入使用；Clash 等客户端无法用它导入订阅——需要客户端订阅请切换到 Clash 格式重新生成。"
    :"用手机扫码或打开订阅链接即可下载这个配置文件，再导入对应客户端。";
  $("subQrTip").textContent=base+(tier==="perm"?" 这是常驻链接：以后换配置在下方「我的常驻订阅」点「更新为当前配置」即可，链接和二维码都不变。":tier==="7d"?" 链接 7 天后自动失效。":" 链接 24 小时后自动失效。");
  $("subQrPanel").classList.remove("hidden");
@@ -1410,6 +1418,7 @@ async function makeSubQr(){
  const tier=$("subTier")?.value||"24h";
  err.classList.add("hidden");panel.classList.add("hidden");
  if(!content){err.textContent="先注册或导入 config.json 生成配置，再生成二维码。";err.classList.remove("hidden");return;}
+ if(currentFormat==="native"&&!nativeSubConfirm())return;
  btn.disabled=true;btn.textContent="正在生成…";
  try{
   const perm=loadPermSub();
@@ -1446,6 +1455,7 @@ async function permSubUpdate(){
  const perm=loadPermSub();if(!perm)return;
  const content=$("mainOutput").value;
  if(!content){permMsg("先注册或导入 config.json 生成配置，再点更新。",true);return;}
+ if(currentFormat==="native"&&!nativeSubConfirm())return;
  try{
   await subApi("/api/sub/update",{token:perm.token,format:currentFormat,content});
   savePermSub({token:perm.token,format:currentFormat});
@@ -1477,6 +1487,7 @@ $("permSubUpdate")?.addEventListener("click",permSubUpdate);
 $("permSubRotate")?.addEventListener("click",permSubRotate);
 $("permSubRevoke")?.addEventListener("click",permSubRevoke);
 renderPermSubBox();
+updateSubNativeWarn();
 $("copyMain").addEventListener("click",()=>copyText($("mainOutput").value,$("copyMain")));
 $("downloadMain").addEventListener("click",()=>{
  if(currentFormat==="native")download("usque-config.json",$("mainOutput").value,"application/json");
