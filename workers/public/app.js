@@ -423,6 +423,7 @@ function opts(){
   freeScope:$("freeScope").value,
   freeProtocolMode:$("freeProtocolMode").value,
   freeMultiSource:$("freeMultiSource")?.checked??true,
+  freeCustomSources:parseFreeCustomSources(),
   freeCountries:uniq([...baseFreeCountries,...($("customIpRoutingEnabled")?.checked?customParsed.countries:[])]),
   customIpEnabled:$("customIpRoutingEnabled")?.checked||false,
   customIpRules:customParsed.rules,
@@ -575,15 +576,15 @@ const FREE_MIX_SOURCES=[
  {key:"leilao",label:"LeilaoMi真测",url:"https://raw.githubusercontent.com/LeilaoMi/AutoMergePublicNodes-Optimized/main/output/global.urls"},
  {key:"aliilapro",label:"ALIILAPRO",url:"https://raw.githubusercontent.com/ALIILAPRO/v2rayNG-Config/main/sub.txt"}
 ];
-function mixProviderId(srcKey,kind="general"){return `FREE-MIX-${srcKey.toUpperCase()}-${kind.toUpperCase()}`}
-function appendOneMixProvider(a,o,src,kind){
+function mixProviderId(srcKey,kind="general",prefix="FREE-MIX"){return `${prefix}-${srcKey.toUpperCase()}-${kind.toUpperCase()}`}
+function appendOneMixProvider(a,o,src,kind,prefix="FREE-MIX",seg="free-mix",icon="🌐"){
  const hc=providerHealth(kind);
- const pid=mixProviderId(src.key,kind);
+ const pid=mixProviderId(src.key,kind,prefix);
  a.push(
    `  ${pid}:`,
    "    type: http",
    `    url: ${q(src.url)}`,
-   `    path: ${q(`./providers/free-mix-${src.key}-${kind}.yaml`)}`,
+   `    path: ${q(`./providers/${seg}-${src.key}-${kind}.yaml`)}`,
    "    interval: 3600",
    "    size-limit: 8388608"
  );
@@ -600,12 +601,26 @@ function appendOneMixProvider(a,o,src,kind){
    `      timeout: ${hc.timeout}`,
    "      lazy: false",
    "    override:",
-   `      additional-prefix: ${q(`🌐 ${src.label} | `)}`
+   `      additional-prefix: ${q(`${icon} ${src.label} | `)}`
  );
  if(o.freeUseWarp)a.push('      dialer-proxy: "WARP中转"');
 }
+// 自定义源：面板里每行一个 http(s) 订阅地址（Clash YAML 或链接列表均可），
+// 去重、去空行、最多 10 个；与内置多源走同一套 provider 生成逻辑。
+function parseFreeCustomSources(){
+ const raw=$("freeCustomSources")?.value||"";
+ const seen=new Set(),out=[];
+ for(const line of String(raw).split(/\r?\n/)){
+   const url=line.trim();
+   if(!/^https?:\/\/\S+$/i.test(url)||seen.has(url))continue;
+   seen.add(url);
+   out.push({key:String(out.length+1),label:`自定义${out.length+1}`,url});
+   if(out.length>=10)break;
+ }
+ return out;
+}
 function freeForService(o,name){
- if(!o.freeEnabled||!o.freeCountries.length)return false;
+ if(!o.freeEnabled||(!o.freeCountries.length&&!(o.freeCustomSources||[]).length))return false;
  const s=o.freeScope||"ai-streaming";
  if(s==="all-foreign")return name!=="Bilibili";
  if(s==="ai-only")return name==="AI";
@@ -668,7 +683,7 @@ function appendOneFreeProvider(a,o,code,kind){
 }
 function appendFreeProviders(a,o){
  if(!o.freeEnabled)return;
- if(!o.freeCountries.length)throw new Error("已启用免费落地，但没有选择任何国家/地区");
+ if(!o.freeCountries.length&&!(o.freeCustomSources||[]).length)throw new Error("已启用免费落地，但没有选择任何国家/地区，也没有填写自定义源");
  a.push("","proxy-providers:");
  for(const code of o.freeCountries){
    // Same source, three independent health gates:
@@ -684,10 +699,16 @@ function appendFreeProviders(a,o){
      appendOneMixProvider(a,o,src,"stream");
    }
  }
+ for(const src of o.freeCustomSources||[]){
+   appendOneMixProvider(a,o,src,"general","FREE-CUSTOM","free-custom","🧩");
+   appendOneMixProvider(a,o,src,"ai","FREE-CUSTOM","free-custom","🧩");
+   appendOneMixProvider(a,o,src,"stream","FREE-CUSTOM","free-custom","🧩");
+ }
 }
 function appendProviderUse(a,o,kind="general",indent="      "){
  for(const code of o.freeCountries)a.push(`${indent}- ${q(freeProviderId(code,kind))}`);
  if(o.freeMultiSource)for(const src of FREE_MIX_SOURCES)a.push(`${indent}- ${q(mixProviderId(src.key,kind))}`);
+ for(const src of o.freeCustomSources||[])a.push(`${indent}- ${q(mixProviderId(src.key,kind,"FREE-CUSTOM"))}`);
 }
 
 function countryRuleName(code){
@@ -725,7 +746,7 @@ function appendCustomIpRules(a,o){
 
 function clashGroupsAndRules(names,o){
  const a=["","proxy-groups:"];
- const freeOn=o.freeEnabled&&o.freeCountries.length>0;
+ const freeOn=o.freeEnabled&&(o.freeCountries.length>0||(o.freeCustomSources||[]).length>0);
 
  groupHeader(a,"🚀 WARP自动","url-test");
  a.push(
@@ -1009,7 +1030,7 @@ function buildClash(){
    throw new Error("自定义 IP 规则使用了地区/免费出口，但免费落地节点已关闭。请启用免费落地，或把目标改成 WARP / DIRECT。");
  }
  const a=[
-  `# ${o.profile} - Clash / Mihomo MASQUE v6.18 Multi-Source-Free-Egress`,
+  `# ${o.profile} - Clash / Mihomo MASQUE v6.19 Custom-Sources`,
   "mixed-port: 7890","allow-lan: false","mode: rule","log-level: info","ipv6: true","unified-delay: true","tcp-concurrent: true","keep-alive-interval: 15","keep-alive-idle: 15"
  ];
  if(o.enableControllerApi){
@@ -1250,7 +1271,7 @@ function resetRecommended(){
  $("egressChatgptFirst").checked=true;$("egressApplyAll").checked=false;$("enableControllerApi").checked=true;
  $("nodeTag").value="CDN";$("profileName").value="MASQUE-Pro";$("nodeCountMode").value="13";$("customNodeCount").value="100";$("nodeBuildMode").value="balanced";$("extraEndpoints").value="";$("nodeNaming").value="detail";
  $("udpForward").checked=true;$("remoteDns").checked=true;$("autoSelect").checked=true;$("showIcons").checked=true;$("adBlock").checked=true;$("includeTestEndpoints").checked=true;$("dedupeNodes").checked=true;$("h2ExtendedPool").checked=true;
- $("freeEgressEnabled").checked=true;$("freeUseWarp").checked=true;$("freeScope").value="ai-streaming";$("freeProtocolMode").value="stable";$("freeMultiSource").checked=true;
+ $("freeEgressEnabled").checked=true;$("freeUseWarp").checked=true;$("freeScope").value="ai-streaming";$("freeProtocolMode").value="stable";$("freeMultiSource").checked=true;$("freeCustomSources").value="";
  $("freeUS").checked=true;$("freeJP").checked=true;$("freeSG").checked=true;$("freeHK").checked=false;$("freeTW").checked=false;$("freeKR").checked=false;
  $("customIpRoutingEnabled").checked=false;$("customIpRoutingRules").value="";
  syncConditional();updateEstimate();updateFreeEgressHint();updateCustomIpRoutingHint();
@@ -1295,7 +1316,7 @@ selectSettingIds.forEach(id=>$(id).addEventListener("change",()=>{
    }
  }
 }));
-const textSettingIds=["customIpRoutingRules","customEndpoint","customPort","customSni","customDns","customInner4","customInner6","customMtu","customNodeCount","extraEndpoints","controllerUrl","controllerSecret","localProxyUrl","nodeTag","profileName"];
+const textSettingIds=["freeCustomSources","customIpRoutingRules","customEndpoint","customPort","customSni","customDns","customInner4","customInner6","customMtu","customNodeCount","extraEndpoints","controllerUrl","controllerSecret","localProxyUrl","nodeTag","profileName"];
 textSettingIds.forEach(id=>$(id).addEventListener("change",()=>{
  if(id==="customIpRoutingRules")updateCustomIpRoutingHint();
  updateEstimate();

@@ -238,6 +238,8 @@ footer{text-align:center;color:#67859a;font-size:12px;padding-top:22px}
   background:rgba(94,68,15,.18);color:#eadbb5;line-height:1.65
 }
 .free-egress-grid{display:grid;grid-template-columns:1.05fr 1.45fr 1.4fr 1.25fr;gap:10px;margin-top:13px}
+.free-custom-sources{grid-column:1/-1}
+.free-custom-sources textarea{min-height:74px;margin-top:8px;font-size:13px}
 .free-master{border-color:#328c77!important;background:rgba(29,117,95,.12)!important}
 .country-select{
   margin-top:12px;padding:11px;border:1px solid #31596b;border-radius:10px;
