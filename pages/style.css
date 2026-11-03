@@ -286,6 +286,12 @@ footer{text-align:center;color:#67859a;font-size:12px;padding-top:22px}
 .sub-list-row{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px dashed #2c5069;flex-wrap:wrap}
 .sub-list-empty{color:#9fb6c6}
 .pool-status{color:#9fb6c6;font-size:13px;margin:10px 0 0}
+.update-banner{margin-top:12px;border:1px solid #2f7d4f;border-radius:10px;padding:10px 14px;background:rgba(10,40,22,.45);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.wizard-card{margin-top:12px;border:1px solid #2c5069;border-radius:10px;padding:12px 14px;background:rgba(4,20,29,.3)}
+.wizard-steps{margin:8px 0 4px;padding-left:22px;line-height:1.9}
+.wizard-note{color:#9fb6c6;font-size:13px;margin:4px 0 0}
+.chain-box summary{cursor:pointer;font-weight:600;padding:2px 0}
+.chain-box .chain-note{margin-top:8px}
 .perm-sub-box{margin-top:12px;border:1.5px dashed #2f7fd0;border-radius:10px;padding:12px;background:rgba(47,127,208,.08)}
 .perm-sub-box p{margin:5px 0;word-break:break-all}
 .perm-sub-note{color:#9fb6c6;font-size:13px}

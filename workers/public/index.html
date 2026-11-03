@@ -11,7 +11,7 @@
 <body>
 <main class="wrap pro-wrap">
   <header class="hero pro-hero">
-    <span class="badge">v6.25 · P1 功能包：账户库 / 订阅管理 / 一键导入 / 端点池清单 / 链式出口</span>
+    <span class="badge">v6.26 · P2 小件：更新提示 / 向导演示 / SNI 轮换 / 诊断导出</span>
     <h1>Usque MASQUE → Clash 小白版</h1>
     <a 
 
@@ -39,6 +39,22 @@
       <b>部署：</b>保持原项目不变：Cloudflare Pages 仍然使用 <code>pages/</code> 根目录，原视频教程无需重录。
     </div>
   </header>
+
+  <div id="updateBanner" class="update-banner hidden">
+    <span id="updateBannerText"></span>
+    <a id="updateBannerLink" href="#" target="_blank" rel="noopener">查看更新</a>
+    <button id="updateBannerClose" type="button">✕ 这个版本不再提醒</button>
+  </div>
+
+  <div class="wizard-card">
+    <b>🧭 新手向导</b>
+    <ol class="wizard-steps">
+      <li id="wizStep1"><span class="wiz-check"></span>注册或导入 WARP 账户 <button id="wizDemo" type="button">🎬 没账号？先用演示模式看看</button></li>
+      <li id="wizStep2"><span class="wiz-check"></span>在下方选格式生成配置（推荐 Clash / Mihomo）</li>
+      <li id="wizStep3"><span class="wiz-check"></span>下载文件导入客户端，或用「扫码获取订阅」手机导入</li>
+    </ol>
+    <p class="wizard-note">完成一步会自动打勾。演示模式用的是假数据，只能看生成效果，不能真的连接。</p>
+  </div>
 
   <!-- STEP 1 -->
   <section class="card step">
@@ -348,6 +364,13 @@
       <label id="customSniWrap" class="hidden">
         <span>自定义 SNI</span>
         <input id="customSni" placeholder="example.com">
+      </label>
+
+      <label class="switch-pro"><input id="sniRotate" type="checkbox"><span>SNI 候选池轮换（生成的节点轮流使用不同 SNI）</span></label>
+
+      <label id="sniCandidatesWrap" class="hidden">
+        <span>SNI 候选（逗号分隔）</span>
+        <input id="sniCandidates" value="www.microsoft.com,www.wikipedia.org,www.cloudflare.com,speed.cloudflare.com,cdn.jsdelivr.net">
       </label>
 
       <label>
@@ -720,8 +743,8 @@
     </div>
     </details>
 
-    <div class="chain-box">
-      <h4>⛓ 链式出口（可选）</h4>
+    <details class="chain-box">
+      <summary>⛓ 链式出口（可选，点击展开设置）</summary>
       <p class="chain-note">让流量先过 WARP、再从你指定的二级代理出去（WARP → 二级代理 → 目标网站）。常见用法：填 Opera 浏览器代理的凭据，或你本机在跑的 opera-proxy 地址，落地就多一个 Opera 出口可选。仅 Clash / Mihomo 格式生效，生成的节点在「🚀 节点选择」里多一个「⛓ 链式出口」。</p>
       <div class="settings-grid">
         <label class="switch-pro"><input id="chainEnabled" type="checkbox"><span>启用链式出口</span></label>
@@ -731,7 +754,7 @@
         <label><span>账号（没有可留空）</span><input id="chainUser"></label>
         <label><span>密码（没有可留空）</span><input id="chainPass" type="password"></label>
       </div>
-    </div>
+    </details>
 
     <p id="poolStatus" class="pool-status">端点池：内置（正在尝试读取远程清单…）</p>
 
@@ -847,6 +870,10 @@
         <span id="subListHint" class="sub-qr-hint"></span>
       </div>
       <div id="subListBox" class="sub-list-box hidden"></div>
+      <div class="row tight">
+        <button id="exportDiagnostics" type="button">🩺 导出诊断信息（脱敏）</button>
+        <span class="sub-qr-hint">使用出问题时把这个文件发给维护者排查：不含私钥、令牌等敏感信息。</span>
+      </div>
     </div>
 
     <textarea id="mainOutput" readonly spellcheck="false"
@@ -867,6 +894,6 @@
 
 <script src="./qrcode.js?v=621"></script>
 <script src="./usque-register.js?v=621"></script>
-<script src="./app.js?v=625"></script>
+<script src="./app.js?v=626"></script>
 </body>
 </html>

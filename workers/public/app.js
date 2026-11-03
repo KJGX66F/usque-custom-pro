@@ -409,7 +409,7 @@ function opts(){
    $("freeHK").checked?"HK":"",$("freeTW").checked?"TW":"",$("freeKR").checked?"KR":""
  ].filter(Boolean);
  return {
-  sni:selectedSni(),dns:selectedDns(),mtu:selectedMtu(),network:$("networkMode").value,
+  sni:selectedSni(),sniList:parseSniList(),dns:selectedDns(),mtu:selectedMtu(),network:$("networkMode").value,
   stack:$("stackMode").value,cc:$("ccMode").value,outerCc:$("outerCc").value,bbrProfile:$("bbrProfile").value,
   handshake:Number($("handshakeTimeout").value)||0,udp:$("udpForward").checked,remoteDns:$("remoteDns").checked,
   autoSelect:$("autoSelect").checked,icons:$("showIcons").checked,adBlock:$("adBlock").checked,
@@ -520,7 +520,7 @@ function updateEstimate(){
    `预计生成：${actual} 个节点${shortage} · ${$("networkMode").selectedOptions[0].textContent} · ${$("ruleMode").selectedOptions[0].textContent}`;
 }
 
-function makeNode(a,name,server,port,o){
+function makeNode(a,name,server,port,o,idx=0){
  const ips=innerIps();
  const udp=o.network==="h3-l4proxy"?false:o.udp;
  a.push(
@@ -529,7 +529,8 @@ function makeNode(a,name,server,port,o){
  );
  if(ips.v4)a.push(`    ip: ${q(ips.v4)}`);
  if(ips.v6)a.push(`    ipv6: ${q(ips.v6)}`);
- a.push(`    mtu: ${o.mtu}`,`    udp: ${bool(udp)}`,`    sni: ${q(o.sni)}`);
+ const nodeSni=(o.sniList&&o.sniList.length>1)?o.sniList[idx%o.sniList.length]:o.sni;
+ a.push(`    mtu: ${o.mtu}`,`    udp: ${bool(udp)}`,`    sni: ${q(nodeSni)}`);
  if(o.network!=="quic")a.push(`    network: ${o.network}`);
  a.push("    ip-stack:",`      mode: ${o.stack}`,`      congestion-controller: ${o.cc}`);
  if(o.remoteDns){
@@ -1053,7 +1054,7 @@ function buildClash(){
   "  nameserver:","    - https://doh.pub/dns-query","    - https://dns.alidns.com/dns-query",
   "","proxies:"
  );
- pairs.forEach(([server,port],i)=>{const n=nodeName(server,port,i);names.push(n);makeNode(a,n,server,port,o)});
+ pairs.forEach(([server,port],i)=>{const n=nodeName(server,port,i);names.push(n);makeNode(a,n,server,port,o,i)});
  if(o.chain){
   a.push(`  - name: "⛓ 链式出口"`,`    type: ${o.chain.type}`,`    server: ${q(o.chain.host)}`,`    port: ${o.chain.port}`);
   if(o.chain.user)a.push(`    username: ${q(o.chain.user)}`);
@@ -1071,7 +1072,7 @@ function buildShadowrocket(){
  const o=opts(),pairs=connectionPairs(),names=[];
  const a=[`# ${o.profile} - Shadowrocket 2.2.90+ MASQUE (Clash-compatible YAML)`,
  "mixed-port: 7890","mode: rule","ipv6: true","","proxies:"];
- pairs.forEach(([server,port],i)=>{const n=nodeName(server,port,i);names.push(n);makeNode(a,n,server,port,o)});
+ pairs.forEach(([server,port],i)=>{const n=nodeName(server,port,i);names.push(n);makeNode(a,n,server,port,o,i)});
  a.push("","proxy-groups:",'  - name: "PROXY"',"    type: select","    proxies:");
  names.forEach(n=>a.push(`      - ${q(n)}`));a.push("      - DIRECT","","rules:","  - GEOIP,CN,DIRECT","  - MATCH,PROXY","");
  return a.join("\n");
@@ -1201,7 +1202,7 @@ function loadSource(text,label){
  $("regSummary").classList.remove("hidden");$("regSummary").textContent=`已加载：${label}\nendpoint_v4: ${source.endpoint_v4||"(无)"}\nendpoint_v6: ${source.endpoint_v6||"(无)"}\nipv4: ${source.ipv4||"(无)"}\nipv6: ${source.ipv6||"(无)"}`;
  setStatus("原生 config.json 已加载，可以直接自定义和转换。","ok");
  settingsDirty=false;setSettingsState("clean","原生配置加载成功，当前设置已应用");
- toast(`已加载 ${label}，无需重新注册。`,"success","原生配置加载成功");
+ toast(`已加载 ${label}，无需重新注册。`,"success","原生配置加载成功");wizSet(1);
 }
 
 async function register(){
@@ -1380,6 +1381,96 @@ $("fmtClash").addEventListener("click",()=>{try{setFormat("clash");toast(`Clash 
 $("fmtShadowrocket").addEventListener("click",()=>{try{setFormat("shadowrocket");toast(`Shadowrocket 配置已生成，共 ${connectionPairs().length} 个节点。`,"success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
 $("fmtSingbox").addEventListener("click",()=>{try{setFormat("singbox");toast("sing-box 兼容配置已生成。","success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
 $("fmtVless").addEventListener("click",()=>{try{setFormat("vless");toast("VLESS 本地桥接配置已生成。","success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
+const PANEL_VERSION="6.26";
+function versionNewer(a,b){
+ const pa=String(a).replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);
+ const pb=String(b).replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);
+ for(let i=0;i<Math.max(pa.length,pb.length);i++){const x=pa[i]||0,y=pb[i]||0;if(x>y)return true;if(x<y)return false;}
+ return false;
+}
+async function checkPanelUpdate(){
+ try{
+  const res=await fetch("https://api.github.com/repos/KJGX66F/usque-custom-pro/releases/latest",{headers:{Accept:"application/vnd.github+json"}});
+  if(!res.ok)return;
+  const d=await res.json();
+  const tag=String(d.tag_name||"");
+  if(!tag||!versionNewer(tag,PANEL_VERSION))return;
+  let dismissed="";try{dismissed=localStorage.getItem("usque.dismissedRelease")||"";}catch{}
+  if(dismissed===tag)return;
+  const banner=$("updateBanner");if(!banner)return;
+  $("updateBannerText").textContent=`🎉 面板有新版本 ${tag}（你正在用 v${PANEL_VERSION}），建议更新：`;
+  $("updateBannerLink").href=d.html_url||"https://github.com/KJGX66F/usque-custom-pro/releases";
+  banner.dataset.tag=tag;
+  banner.classList.remove("hidden");
+ }catch{}
+}
+$("updateBannerClose")?.addEventListener("click",()=>{
+ const banner=$("updateBanner");
+ try{localStorage.setItem("usque.dismissedRelease",banner?.dataset.tag||"");}catch{}
+ banner?.classList.add("hidden");
+});
+function wizSet(n){
+ const el=$("wizStep"+n);if(!el)return;
+ const check=el.querySelector(".wiz-check");if(check)check.textContent="✅ ";
+ el.classList.add("done");
+}
+const DEMO_CONFIG={
+ private_key:"MHcCAQEEIBcBntFulK4fvQR9vcKpoogqU7XIvOHFrQTZH0WIjTZ3oAoGCCqGSM49AwEHoUQDQgAEqiw37D2TdNver68dvS6sHWpxcNvr3G5O3SF+UymdoRZhw0IVQ+PgXdXoXUoQs1gIP5Hz7r4aSIoWkzWdbp46AA==",
+ endpoint_pub_key:"-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEqiw37D2TdNver68dvS6sHWpxcNvr\n3G5O3SF+UymdoRZhw0IVQ+PgXdXoXUoQs1gIP5Hz7r4aSIoWkzWdbp46AA==\n-----END PUBLIC KEY-----\n",
+ endpoint_v4:"162.159.198.2",endpoint_v6:"2606:4700:103::2",
+ endpoint_h2_v4:"162.159.198.2",endpoint_h2_v6:"2606:4700:103::2",
+ ipv4:"172.16.0.2",ipv6:"2606:4700:110:8a36::2",
+ id:"demo-account-not-real",access_token:"demo",license:"demo"
+};
+$("wizDemo")?.addEventListener("click",()=>{
+ try{
+  loadSource(JSON.stringify(DEMO_CONFIG,null,2),"演示模式（假数据，不能真连接）");
+  toast("已进入演示模式：所有生成效果都可体验，但这份假配置不能真的连接。要正式使用请注册或导入你自己的 config.json。","warning","演示模式");
+ }catch(e){toast("演示模式加载失败："+String((e&&e.message)||e),"error","演示模式");}
+});
+["fmtNative","fmtClash","fmtShadowrocket","fmtSingbox","fmtVless"].forEach(id=>$(id)?.addEventListener("click",()=>wizSet(2)));
+["downloadMain","copyMain"].forEach(id=>$(id)?.addEventListener("click",()=>wizSet(3)));
+function parseSniList(){
+ if(!$("sniRotate")?.checked)return [];
+ const list=uniq(($("sniCandidates")?.value||"").split(/[,\s，]+/).map(s=>s.trim()).filter(s=>/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(s)));
+ return list.length>1?list:[];
+}
+$("sniRotate")?.addEventListener("change",e=>{
+ $("sniCandidatesWrap")?.classList.toggle("hidden",!e.target.checked);
+});
+function buildDiagnostics(){
+ const o=(()=>{try{return opts();}catch{return null;}})();
+ const lines=[];
+ const push=(k,v)=>lines.push(`${k}: ${v}`);
+ push("工具","Usque MASQUE Pro 面板（诊断信息，已脱敏）");
+ push("面板版本","v"+PANEL_VERSION);
+ push("导出时间",new Date().toLocaleString());
+ push("浏览器",navigator.userAgent);
+ push("当前格式",currentFormat);
+ push("端点池",($("poolStatus")?.textContent||"").trim()||"(未知)");
+ push("账户已加载",source?"是":"否");
+ if(source){
+  push("endpoint_v4",source.endpoint_v4||"(无)");
+  push("endpoint_v6",source.endpoint_v6||"(无)");
+  push("隧道 IPv4",source.ipv4?"有":"无");
+  push("隧道 IPv6",source.ipv6?"有":"无");
+  push("账户 ID",source.id?String(source.id).slice(0,6)+"…（已截断）":"(无)");
+ }
+ push("预计节点数",(()=>{try{return connectionPairs().length;}catch{return "(未知)";}})());
+ push("账户库数量",loadAccounts().length);
+ push("常驻订阅",loadPermSub()?"有（令牌已隐藏）":"无");
+ if(o){
+  push("链式出口",o.chain?"已启用":"未启用");
+  push("SNI",o.sniList&&o.sniList.length?`候选池轮换（${o.sniList.length} 个）`:o.sni);
+  push("免费落地",o.freeEnabled?`开（国家：${o.freeCountries.join("/")||"无"}，多源合并：${o.freeMultiSource?"开":"关"}，自定义源：${(o.freeCustomSources||[]).length} 个）`:"关");
+ }
+ lines.push("","说明：本文件只包含排查问题需要的非敏感信息，不含私钥、access_token、license、订阅令牌，可以放心发送。");
+ return lines.join("\n");
+}
+$("exportDiagnostics")?.addEventListener("click",()=>{
+ download("usque-diagnostics.txt",buildDiagnostics(),"text/plain");
+});
+
 async function subApiGet(path,retry=true){
  const headers={};const ownerKey=loadSubOwnerKey();
  if(ownerKey)headers["X-Sub-Owner"]=ownerKey;
@@ -1504,17 +1595,25 @@ function setPoolStatus(remote,updatedAt){
  el.textContent=remote?`端点池：远程清单${updatedAt?`（更新于 ${updatedAt}）`:""}，已覆盖内置池。`:"端点池：内置（远程清单读取失败或尚未发布，已自动回退）。";
 }
 async function loadRemotePool(){
- try{
-  const res=await fetch(`https://raw.githubusercontent.com/KJGX66F/usque-custom-pro/main/endpoints.json?t=${Date.now()}`,{cache:"no-store"});
-  if(!res.ok)throw new Error("HTTP "+res.status);
-  const data=await res.json();
-  if(data&&data.endpoints)for(const k of Object.keys(ENDPOINTS))if(typeof data.endpoints[k]==="string"&&data.endpoints[k])ENDPOINTS[k]=data.endpoints[k];
-  if(data&&Array.isArray(data.curatedPairs)&&data.curatedPairs.length)remoteCuratedPairs=data.curatedPairs;
-  if(data&&Array.isArray(data.testPairs))remoteTestPairs=data.testPairs;
-  if(data&&Array.isArray(data.h2Prefixes)&&data.h2Prefixes.length)remoteH2Prefixes=data.h2Prefixes.map(String);
-  setPoolStatus(true,data&&data.updatedAt);
-  updateEstimate();
- }catch{setPoolStatus(false);}
+ const poolUrls=[
+  "https://raw.githubusercontent.com/KJGX66F/usque-custom-pro/main/endpoints.json",
+  "https://cdn.jsdelivr.net/gh/KJGX66F/usque-custom-pro@main/endpoints.json"
+ ];
+ for(const base of poolUrls){
+  try{
+   const res=await fetch(`${base}?t=${Date.now()}`,{cache:"no-store"});
+   if(!res.ok)continue;
+   const data=await res.json();
+   if(data&&data.endpoints)for(const k of Object.keys(ENDPOINTS))if(typeof data.endpoints[k]==="string"&&data.endpoints[k])ENDPOINTS[k]=data.endpoints[k];
+   if(data&&Array.isArray(data.curatedPairs)&&data.curatedPairs.length)remoteCuratedPairs=data.curatedPairs;
+   if(data&&Array.isArray(data.testPairs))remoteTestPairs=data.testPairs;
+   if(data&&Array.isArray(data.h2Prefixes)&&data.h2Prefixes.length)remoteH2Prefixes=data.h2Prefixes.map(String);
+   setPoolStatus(true,data&&data.updatedAt);
+   updateEstimate();
+   return;
+  }catch{}
+ }
+ setPoolStatus(false);
 }
 
 function resetSubQr(){
@@ -1556,7 +1655,7 @@ function showSubQr(url,tier){
    :"用手机扫码或打开订阅链接即可下载这个配置文件，再导入对应客户端。";
  $("subQrTip").textContent=base+(tier==="perm"?" 这是常驻链接：以后换配置在下方「我的常驻订阅」点「更新为当前配置」即可，链接和二维码都不变。":tier==="7d"?" 链接 7 天后自动失效。":" 链接 24 小时后自动失效。");
  $("subQrPanel").classList.remove("hidden");
- renderSubImportLinks(url);
+ renderSubImportLinks(url);wizSet(3);
 }
 const SUB_OWNER_KEY_LS="usque.subOwnerKey";
 function loadSubOwnerKey(){try{return localStorage.getItem(SUB_OWNER_KEY_LS)||"";}catch{return "";}}
@@ -1677,5 +1776,5 @@ $("downloadEgressConfig").addEventListener("click",()=>{
   download("warp-egress-preference.json",JSON.stringify(egressPreferences(),null,2),"application/json");
 });
 
-resetRecommended();syncConditional();loadRemotePool();renderAccounts();updateEstimate();updateFreeEgressHint();updateCustomIpRoutingHint();setSettingsState("clean","当前设置已应用");
+resetRecommended();syncConditional();loadRemotePool();renderAccounts();checkPanelUpdate();updateEstimate();updateFreeEgressHint();updateCustomIpRoutingHint();setSettingsState("clean","当前设置已应用");
 })();

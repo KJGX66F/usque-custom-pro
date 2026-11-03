@@ -1,4 +1,4 @@
-# Usque MASQUE Pro v6.25 — Cloudflare Workers 版
+# Usque MASQUE Pro v6.26 — Cloudflare Workers 版
 
 ## 目录
 
