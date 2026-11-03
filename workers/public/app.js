@@ -1030,7 +1030,7 @@ function buildClash(){
    throw new Error("自定义 IP 规则使用了地区/免费出口，但免费落地节点已关闭。请启用免费落地，或把目标改成 WARP / DIRECT。");
  }
  const a=[
-  `# ${o.profile} - Clash / Mihomo MASQUE v6.19 Custom-Sources`,
+  `# ${o.profile} - Clash / Mihomo MASQUE v6.20 Source-Overview`,
   "mixed-port: 7890","allow-lan: false","mode: rule","log-level: info","ipv6: true","unified-delay: true","tcp-concurrent: true","keep-alive-interval: 15","keep-alive-idle: 15"
  ];
  if(o.enableControllerApi){

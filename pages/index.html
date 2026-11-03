@@ -6,12 +6,12 @@
   <meta name="color-scheme" content="dark">
   <meta name="description" content="Usque MASQUE 小白友好转换工具：网页一键注册并保存原生 config.json，再生成 Clash/Mihomo 智能分流；可选 US/JP/SG 等公开免费落地节点，并通过 WARP/MASQUE 中转连接。">
   <title>Usque MASQUE · 免费落地节点池</title>
-  <link rel="stylesheet" href="./style.css?v=619">
+  <link rel="stylesheet" href="./style.css?v=620">
 </head>
 <body>
 <main class="wrap pro-wrap">
   <header class="hero pro-hero">
-    <span class="badge">v6.19 · 免费落地自定义源 + 多源合并</span>
+    <span class="badge">v6.20 · 节点来源总览 + 自定义源高亮</span>
     <h1>Usque MASQUE → Clash 小白版</h1>
 
     <a 
@@ -157,10 +157,6 @@
           <span>多源合并：再加 4 个公共源一起拉取、测活竞速（可用节点更多）</span>
         </label>
 
-        <label class="free-custom-sources">
-          <span>自定义节点源（每行一个订阅地址，Clash YAML 或链接列表都行；留空不用，最多 10 个；只填自定义源、不勾国家也可以）</span>
-          <textarea id="freeCustomSources" rows="3" placeholder="https://example.com/my-nodes.yaml"></textarea>
-        </label>
 
         <label>
           <span>哪些服务走免费落地</span>
@@ -234,13 +230,23 @@
       </div>
 
       <details class="free-source-details">
-        <summary>查看节点来源与说明</summary>
+        <summary>📚 查看节点来源与说明（内置 5 个源 · 可添加自定义源）</summary>
         <div>
-          <p>主源：<code>Au1rxx/free-vpn-subscriptions</code>。按国家提供 Clash YAML，并持续自动更新。</p>
-          <p>多源合并（默认开）：另有 <code>ermaozi</code>、<code>cbusifabcap</code>、<code>LeilaoMi真测</code>、<code>ALIILAPRO</code> 4 个公共链接源与主源一起拉取，在同一批自动测速组里竞速，哪个快用哪个。这些源不分国家，只进「免费落地自动 / AI / 流媒体」总组，不进国家组；不同源之间可能有个别重复节点，测速会自动选最快的一个，不影响使用。</p>
-          <p>自定义源：也可以在上方「自定义节点源」里填你自己的订阅地址（每行一个），会和内置源一起拉取测速；填了自定义源时，不勾任何国家也能单独使用。想换掉内置源时，关掉「多源合并」并取消国家勾选、只留自定义源即可。</p>
-          <p>默认稳定模式会排除 Hysteria2 / TUIC / WireGuard / HTTP / SOCKS 等，更优先测试 VLESS / VMess / Trojan / Shadowsocks。</p>
-          <a href="https://github.com/Au1rxx/free-vpn-subscriptions" target="_blank" rel="noopener">打开节点源项目</a>
+          <p><b>内置节点源（共 5 个，全部一起拉取、在同一批自动测速组里竞速，哪个快用哪个）：</b></p>
+          <ul class="source-list">
+            <li><b>主源 · Au1rxx/free-vpn-subscriptions</b>（按国家 Clash YAML，每小时更新）<a href="https://github.com/Au1rxx/free-vpn-subscriptions" target="_blank" rel="noopener">项目</a><br><code>raw.githubusercontent.com/Au1rxx/free-vpn-subscriptions/main/output/by-country/clash-国家代码.yaml</code>（按上方勾选的国家逐个拉取）</li>
+            <li><b>ermaozi</b> <a href="https://github.com/ermaozi/get_subscribe" target="_blank" rel="noopener">项目</a><br><code>raw.githubusercontent.com/ermaozi/get_subscribe/main/subscribe/v2ray.txt</code></li>
+            <li><b>cbusifabcap</b> <a href="https://github.com/cbusifabcap/daily_free_vpn" target="_blank" rel="noopener">项目</a><br><code>raw.githubusercontent.com/cbusifabcap/daily_free_vpn/main/Z.txt</code></li>
+            <li><b>LeilaoMi真测</b> <a href="https://github.com/LeilaoMi/AutoMergePublicNodes-Optimized" target="_blank" rel="noopener">项目</a><br><code>raw.githubusercontent.com/LeilaoMi/AutoMergePublicNodes-Optimized/main/output/global.urls</code></li>
+            <li><b>ALIILAPRO</b> <a href="https://github.com/ALIILAPRO/v2rayNG-Config" target="_blank" rel="noopener">项目</a><br><code>raw.githubusercontent.com/ALIILAPRO/v2rayNG-Config/main/sub.txt</code></li>
+          </ul>
+          <p>后 4 个源受上方「多源合并」开关控制（默认开）；它们不分国家，只进「免费落地自动 / AI / 流媒体」总组，不进国家组。不同源之间可能有个别重复节点，测速会自动选最快的一个，不影响使用。</p>
+          <p>默认稳定模式会排除 Hysteria2 / TUIC / WireGuard / HTTP / SOCKS 等，更优先测试 VLESS / VMess / Trojan / Shadowsocks；想要全部协议，把上方「协议筛选」切到「全部协议」。所有源都由你的 Clash 客户端每小时自动重新拉取最新节点，本页面不保存、也不中转任何节点。</p>
+          <div class="custom-source-box">
+            <label for="freeCustomSources"><b>➕ 添加自定义节点源</b>（每行一个订阅地址，Clash YAML 或链接列表都行；留空不用，最多 10 个）</label>
+            <textarea id="freeCustomSources" rows="3" placeholder="https://example.com/my-nodes.yaml"></textarea>
+            <p class="custom-source-tip">填了自定义源会和内置源一起拉取测速；只填自定义源、不勾任何国家也能单独使用。想换掉内置源：关掉上方「多源合并」并取消国家勾选、只留自定义源即可。</p>
+          </div>
         </div>
       </details>
     </div>
@@ -774,7 +780,7 @@
 
 <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
 
-<script src="./usque-register.js?v=619"></script>
-<script src="./app.js?v=619"></script>
+<script src="./usque-register.js?v=620"></script>
+<script src="./app.js?v=620"></script>
 </body>
 </html>

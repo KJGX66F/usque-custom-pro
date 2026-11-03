@@ -238,8 +238,6 @@ footer{text-align:center;color:#67859a;font-size:12px;padding-top:22px}
   background:rgba(94,68,15,.18);color:#eadbb5;line-height:1.65
 }
 .free-egress-grid{display:grid;grid-template-columns:1.05fr 1.45fr 1.4fr 1.25fr;gap:10px;margin-top:13px}
-.free-custom-sources{grid-column:1/-1}
-.free-custom-sources textarea{min-height:74px;margin-top:8px;font-size:13px}
 .free-master{border-color:#328c77!important;background:rgba(29,117,95,.12)!important}
 .country-select{
   margin-top:12px;padding:11px;border:1px solid #31596b;border-radius:10px;
@@ -258,10 +256,17 @@ footer{text-align:center;color:#67859a;font-size:12px;padding-top:22px}
   margin-top:11px;padding:10px 12px;border:1px solid #315d6f;border-radius:10px;
   background:rgba(8,33,46,.48);color:#c7dce8;line-height:1.65
 }
-.free-source-details{margin-top:10px;border:1px solid #29485a;border-radius:10px;background:rgba(4,20,29,.3)}
-.free-source-details summary{cursor:pointer;padding:10px 12px;font-weight:700}
-.free-source-details>div{padding:0 12px 12px;color:#9fb6c6;line-height:1.6}
+.free-source-details{margin-top:12px;border:2px solid #3d9bdc;border-radius:12px;background:rgba(28,110,170,.10);box-shadow:0 0 0 3px rgba(98,193,255,.12),0 6px 18px rgba(0,0,0,.25)}
+.free-source-details summary{cursor:pointer;padding:12px 14px;font-weight:800;color:#aee1ff;font-size:15px}
+.free-source-details>div{padding:0 14px 14px;color:#9fb6c6;line-height:1.6}
 .free-source-details a{color:#80c9ff}
+.source-list{margin:6px 0 10px;padding-left:20px}
+.source-list li{margin:7px 0}
+.source-list code{font-size:11.5px;word-break:break-all;color:#7fd4ff}
+.custom-source-box{margin-top:12px;border:2px dashed #3d9bdc;border-radius:12px;background:rgba(61,155,220,.12);padding:12px}
+.custom-source-box label{color:#eaf6ff}
+.custom-source-box textarea{min-height:74px;margin-top:8px;font-size:13px}
+.custom-source-tip{margin:8px 0 0;font-size:12.5px;color:#bfe3ff}
 @media(max-width:1000px){.free-egress-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.free-egress-grid,.free-groups-preview{grid-template-columns:1fr}}
 
