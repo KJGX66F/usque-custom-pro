@@ -1,4 +1,4 @@
-# Usque MASQUE Pro v6.23 — Cloudflare Workers 版
+# Usque MASQUE Pro v6.24 — Cloudflare Workers 版
 
 ## 目录
 
@@ -138,7 +138,7 @@ wrangler.jsonc
 
 ## 扫码订阅的 KV 绑定（可选，v6.21 起）
 
-面板「扫码获取订阅」需要一个 KV 命名空间存放生成的配置（有效期可选 24 小时 / 7 天 / 常驻，常驻可轮换吊销）：
+面板「扫码获取订阅」需要一个 KV 命名空间存放生成的配置（有效期可选 24 小时 / 7 天 / 常驻，常驻可轮换吊销）。公开给别人用时建议再执行 `npx wrangler secret put SUB_OWNER_KEY` 设置部署者口令：设置后常驻订阅只有部署者能创建/轮换，访客只能建 24 小时 / 7 天订阅：
 
 ```text
 npx wrangler kv namespace create SUB_KV

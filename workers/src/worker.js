@@ -249,6 +249,7 @@ async function createSubscription(request, env) {
     return json({ message: "订阅托管未启用：请先在 Cloudflare 给本项目绑定 KV 命名空间，变量名必须为 SUB_KV（步骤见 README「扫码获取订阅」）。" }, 503);
   }
   if (!allowedSameOrigin(request)) return json({ message: "Origin 不被允许" }, 403);
+  const limited = await subRateLimit(request, env); if (limited) return limited;
   const type = request.headers.get("Content-Type") || "";
   if (!type.toLowerCase().includes("application/json")) return json({ message: "Content-Type 必须为 application/json" }, 400);
   const text = await request.text();
@@ -260,6 +261,7 @@ async function createSubscription(request, env) {
   if (!meta || !content || content.length > 200000) return json({ message: "format 或 content 无效" }, 400);
   const tier = body.tier === undefined ? "24h" : body.tier;
   if (!(tier in SUB_TIERS)) return json({ message: "tier 无效（可选 24h / 7d / perm）" }, 400);
+  if (tier === "perm" && !ownerKeyOk(request, env)) return ownerRequired();
   const ttl = SUB_TIERS[tier];
   const token = subToken();
   const putOptions = { metadata: { type: meta.type, filename: meta.filename, tier } };
@@ -273,6 +275,37 @@ function subKvMissing(env) {
   return !env?.SUB_KV
     ? json({ message: "订阅托管未启用：请先在 Cloudflare 给本项目绑定 KV 命名空间，变量名必须为 SUB_KV（步骤见 README「扫码获取订阅」）。" }, 503)
     : null;
+}
+
+// Public-deployment protection: when the deployer sets SUB_OWNER_KEY,
+// creating or rotating a PERMANENT subscription additionally requires the
+// X-Sub-Owner header to match it (short-lived tiers stay open to visitors,
+// so their records expire on their own instead of piling up in KV).
+// Unset = protection off (self-hosted default, unchanged behavior).
+function ownerKeyOk(request, env) {
+  const key = env?.SUB_OWNER_KEY;
+  if (!key) return true;
+  return (request.headers.get("X-Sub-Owner") || "") === key;
+}
+
+function ownerRequired() {
+  return json({ message: "常驻订阅仅部署者可用：需要部署者口令（部署者在 Cloudflare 设置的 SUB_OWNER_KEY）。", code: "owner_required" }, 403);
+}
+
+// Simple per-IP hourly cap on subscription writes (create/update/rotate).
+// Best-effort (KV is eventually consistent); for stricter protection add a
+// Cloudflare Rate Limiting rule on /api/sub* — see README.
+const SUB_WRITE_LIMIT_PER_HOUR = 60;
+
+async function subRateLimit(request, env) {
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const bucket = `rl:${ip}:${Math.floor(Date.now() / 3600000)}`;
+  const current = parseInt((await env.SUB_KV.get(bucket)) || "0", 10) || 0;
+  if (current >= SUB_WRITE_LIMIT_PER_HOUR) {
+    return json({ message: "操作太频繁：这个 IP 一小时内的订阅写入次数已达上限，请稍后再试。" }, 429);
+  }
+  await env.SUB_KV.put(bucket, String(current + 1), { expirationTtl: 3700 });
+  return null;
 }
 
 async function readSubJson(request) {
@@ -294,6 +327,7 @@ async function loadPermSubscription(env, token) {
 async function updateSubscription(request, env) {
   const missing = subKvMissing(env); if (missing) return missing;
   if (!allowedSameOrigin(request)) return json({ message: "Origin 不被允许" }, 403);
+  const limited = await subRateLimit(request, env); if (limited) return limited;
   const parsed = await readSubJson(request); if (parsed.error) return parsed.error;
   const loaded = await loadPermSubscription(env, parsed.body.token); if (loaded.error) return loaded.error;
   const meta = SUB_FORMATS[parsed.body.format];
@@ -308,6 +342,8 @@ async function updateSubscription(request, env) {
 async function rotateSubscription(request, env) {
   const missing = subKvMissing(env); if (missing) return missing;
   if (!allowedSameOrigin(request)) return json({ message: "Origin 不被允许" }, 403);
+  if (!ownerKeyOk(request, env)) return ownerRequired();
+  const limited = await subRateLimit(request, env); if (limited) return limited;
   const parsed = await readSubJson(request); if (parsed.error) return parsed.error;
   const loaded = await loadPermSubscription(env, parsed.body.token); if (loaded.error) return loaded.error;
   const token = subToken();

@@ -1406,9 +1406,24 @@ function showSubQr(url,tier){
  $("subQrTip").textContent=base+(tier==="perm"?" 这是常驻链接：以后换配置在下方「我的常驻订阅」点「更新为当前配置」即可，链接和二维码都不变。":tier==="7d"?" 链接 7 天后自动失效。":" 链接 24 小时后自动失效。");
  $("subQrPanel").classList.remove("hidden");
 }
-async function subApi(path,body){
- const res=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+const SUB_OWNER_KEY_LS="usque.subOwnerKey";
+function loadSubOwnerKey(){try{return localStorage.getItem(SUB_OWNER_KEY_LS)||"";}catch{return "";}}
+function saveSubOwnerKey(v){try{if(v)localStorage.setItem(SUB_OWNER_KEY_LS,v);else localStorage.removeItem(SUB_OWNER_KEY_LS);}catch{}}
+async function subApi(path,body,retry=true){
+ const headers={"Content-Type":"application/json"};
+ const ownerKey=loadSubOwnerKey();
+ if(ownerKey)headers["X-Sub-Owner"]=ownerKey;
+ const res=await fetch(path,{method:"POST",headers,body:JSON.stringify(body)});
  const data=await res.json().catch(()=>({}));
+ if(res.status===403&&data.code==="owner_required"){
+  if(retry){
+   const entered=prompt("常驻订阅仅部署者可用。请输入部署者口令（部署者在 Cloudflare 里设置的 SUB_OWNER_KEY；只保存在你这台浏览器里）：");
+   if(entered&&entered.trim()){saveSubOwnerKey(entered.trim());return subApi(path,body,false);}
+   throw new Error("已取消输入部署者口令，常驻订阅未生成。");
+  }
+  saveSubOwnerKey(null);
+  throw new Error(data.message||"部署者口令不正确。");
+ }
  if(!res.ok)throw new Error(data.message||`操作失败（HTTP ${res.status}）`);
  return data;
 }
