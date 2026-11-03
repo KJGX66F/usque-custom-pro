@@ -1370,24 +1370,70 @@ function resetSubQr(){
  $("subQrPanel")?.classList.add("hidden");
  $("subQrError")?.classList.add("hidden");
 }
+const PERM_SUB_KEY="usque.permSub.v1";
+function loadPermSub(){try{const v=JSON.parse(localStorage.getItem(PERM_SUB_KEY)||"null");return v&&/^[a-f0-9]{48}$/.test(v.token||"")?v:null;}catch{return null;}}
+function savePermSub(v){try{if(v)localStorage.setItem(PERM_SUB_KEY,JSON.stringify(v));else localStorage.removeItem(PERM_SUB_KEY);}catch{}}
+function permSubUrl(token){return `${location.origin}/sub/${token}`;}
+function renderPermSubBox(){
+ const box=$("permSubBox");if(!box)return;
+ const perm=loadPermSub();
+ if(!perm){box.classList.add("hidden");return;}
+ const link=$("permSubLink"),url=permSubUrl(perm.token);
+ link.href=url;link.textContent=url;
+ box.classList.remove("hidden");
+}
+function permMsg(text,isError){
+ const m=$("permSubMsg");if(!m)return;
+ m.textContent=text;m.style.color=isError?"#ff9c9c":"";m.classList.remove("hidden");
+}
+function showSubQr(url,tier){
+ const payload=currentFormat==="clash"?`clash://install-config?url=${encodeURIComponent(url)}`:url;
+ const qr=qrcode(0,"M");qr.addData(payload);qr.make();
+ $("subQrBox").innerHTML=qr.createSvgTag({cellSize:5,margin:10,scalable:true});
+ const link=$("subQrLink");link.href=url;link.textContent=url;
+ $("subQrValidity").textContent=tier==="perm"?"订阅链接（常驻，长期有效）：":tier==="7d"?"订阅链接（7 天内有效）：":"订阅链接（24 小时内有效）：";
+ const base=currentFormat==="clash"
+   ?"用 Clash Verge / FlClash 等客户端扫码会直接弹出导入订阅；也可以在手机上打开订阅链接下载文件再导入。"
+   :"用手机扫码或打开订阅链接即可下载这个配置文件，再导入对应客户端。";
+ $("subQrTip").textContent=base+(tier==="perm"?" 这是常驻链接：以后换配置在下方「我的常驻订阅」点「更新为当前配置」即可，链接和二维码都不变。":tier==="7d"?" 链接 7 天后自动失效。":" 链接 24 小时后自动失效。");
+ $("subQrPanel").classList.remove("hidden");
+}
+async function subApi(path,body){
+ const res=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+ const data=await res.json().catch(()=>({}));
+ if(!res.ok)throw new Error(data.message||`操作失败（HTTP ${res.status}）`);
+ return data;
+}
 async function makeSubQr(){
  const btn=$("makeSubQr"),err=$("subQrError"),panel=$("subQrPanel");
  const content=$("mainOutput").value;
+ const tier=$("subTier")?.value||"24h";
  err.classList.add("hidden");panel.classList.add("hidden");
  if(!content){err.textContent="先注册或导入 config.json 生成配置，再生成二维码。";err.classList.remove("hidden");return;}
  btn.disabled=true;btn.textContent="正在生成…";
  try{
-  const res=await fetch("/api/sub",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({format:currentFormat,content})});
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok||!data.url)throw new Error(data.message||`生成失败（HTTP ${res.status}）`);
-  const payload=currentFormat==="clash"?`clash://install-config?url=${encodeURIComponent(data.url)}`:data.url;
-  const qr=qrcode(0,"M");qr.addData(payload);qr.make();
-  $("subQrBox").innerHTML=qr.createSvgTag({cellSize:5,margin:10,scalable:true});
-  const link=$("subQrLink");link.href=data.url;link.textContent=data.url;
-  $("subQrTip").textContent=currentFormat==="clash"
-    ?"用 Clash Verge / FlClash 等客户端扫码会直接弹出导入订阅；也可以在手机上打开订阅链接下载文件再导入。"
-    :"用手机扫码或打开订阅链接即可下载这个配置文件，再导入对应客户端。链接 24 小时后自动失效。";
-  panel.classList.remove("hidden");
+  const perm=loadPermSub();
+  if(tier==="perm"&&perm){
+   try{
+    await subApi("/api/sub/update",{token:perm.token,format:currentFormat,content});
+   }catch(e){
+    if(!/不存在|已过期/.test(String((e&&e.message)||e)))throw e;
+    savePermSub(null);
+    const data=await subApi("/api/sub",{format:currentFormat,content,tier:"perm"});
+    if(data.token)savePermSub({token:data.token,format:currentFormat});
+    showSubQr(data.url,"perm");
+    renderPermSubBox();
+    return;
+   }
+   savePermSub({token:perm.token,format:currentFormat});
+   showSubQr(permSubUrl(perm.token),"perm");
+  }else{
+   const data=await subApi("/api/sub",{format:currentFormat,content,tier});
+   if(!data.url)throw new Error("生成失败：后端没有返回链接。");
+   if(tier==="perm"&&data.token)savePermSub({token:data.token,format:currentFormat});
+   showSubQr(data.url,tier);
+  }
+  renderPermSubBox();
  }catch(e){
   err.textContent=String((e&&e.message)||e);
   err.classList.remove("hidden");
@@ -1396,6 +1442,41 @@ async function makeSubQr(){
  }
 }
 $("makeSubQr")?.addEventListener("click",makeSubQr);
+async function permSubUpdate(){
+ const perm=loadPermSub();if(!perm)return;
+ const content=$("mainOutput").value;
+ if(!content){permMsg("先注册或导入 config.json 生成配置，再点更新。",true);return;}
+ try{
+  await subApi("/api/sub/update",{token:perm.token,format:currentFormat,content});
+  savePermSub({token:perm.token,format:currentFormat});
+  showSubQr(permSubUrl(perm.token),"perm");
+  permMsg("已更新：常驻链接不变，内容已换成当前配置。客户端里点一次「更新订阅」即可。",false);
+ }catch(e){
+  permMsg(String((e&&e.message)||e),true);
+  if(/不存在|已过期/.test(String((e&&e.message)||e))){savePermSub(null);renderPermSubBox();}
+ }
+}
+async function permSubRotate(){
+ const perm=loadPermSub();if(!perm)return;
+ try{
+  const data=await subApi("/api/sub/rotate",{token:perm.token});
+  if(!data.token)throw new Error("轮换失败：后端没有返回新链接。");
+  savePermSub({token:data.token,format:perm.format});
+  renderPermSubBox();
+  showSubQr(data.url||permSubUrl(data.token),"perm");
+  permMsg("已轮换：旧链接立即失效，请用新链接或新二维码重新导入一次。",false);
+ }catch(e){permMsg(String((e&&e.message)||e),true);}
+}
+async function permSubRevoke(){
+ const perm=loadPermSub();if(!perm)return;
+ try{await subApi("/api/sub/revoke",{token:perm.token});}catch(e){/* 后端记录已不存在时同样清掉本地 */}
+ savePermSub(null);renderPermSubBox();resetSubQr();
+ toast("常驻订阅已删除，链接立即失效。","success","已删除");
+}
+$("permSubUpdate")?.addEventListener("click",permSubUpdate);
+$("permSubRotate")?.addEventListener("click",permSubRotate);
+$("permSubRevoke")?.addEventListener("click",permSubRevoke);
+renderPermSubBox();
 $("copyMain").addEventListener("click",()=>copyText($("mainOutput").value,$("copyMain")));
 $("downloadMain").addEventListener("click",()=>{
  if(currentFormat==="native")download("usque-config.json",$("mainOutput").value,"application/json");

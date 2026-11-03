@@ -1,4 +1,4 @@
-# Usque MASQUE Pro v6.21 — Cloudflare Workers 版
+# Usque MASQUE Pro v6.22 — Cloudflare Workers 版
 
 ## 目录
 
@@ -136,9 +136,9 @@ wrangler.jsonc
 
 名称只能使用 Cloudflare Worker 支持的项目命名格式。
 
-## 扫码订阅的 KV 绑定（可选，v6.21）
+## 扫码订阅的 KV 绑定（可选，v6.21 起）
 
-面板「扫码获取订阅」需要一个 KV 命名空间临时存放生成的配置（24 小时自动过期）：
+面板「扫码获取订阅」需要一个 KV 命名空间存放生成的配置（有效期可选 24 小时 / 7 天 / 常驻，常驻可轮换吊销）：
 
 ```text
 npx wrangler kv namespace create SUB_KV

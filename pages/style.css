@@ -276,6 +276,10 @@ footer{text-align:center;color:#67859a;font-size:12px;padding-top:22px}
 .sub-qr-side a{color:#80c9ff;word-break:break-all}
 .sub-qr-warn{color:#ffb86b}
 .sub-qr-error{color:#ff9c9c;margin-top:10px}
+.perm-sub-box{margin-top:12px;border:1.5px dashed #2f7fd0;border-radius:10px;padding:12px;background:rgba(47,127,208,.08)}
+.perm-sub-box p{margin:5px 0;word-break:break-all}
+.perm-sub-note{color:#9fb6c6;font-size:13px}
+.perm-sub-msg{color:#8be89a;font-size:13px}
 @media(max-width:1000px){.free-egress-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.free-egress-grid,.free-groups-preview{grid-template-columns:1fr}}
 

@@ -11,7 +11,7 @@
 <body>
 <main class="wrap pro-wrap">
   <header class="hero pro-hero">
-    <span class="badge">v6.21 · 扫码获取订阅 + 节点来源总览</span>
+    <span class="badge">v6.22 · 订阅可选常驻 + 轮换吊销</span>
     <h1>Usque MASQUE → Clash 小白版</h1>
     <a 
 
@@ -766,18 +766,37 @@
     <div id="subQrArea" class="sub-qr-area hidden">
       <div class="row tight">
         <button id="makeSubQr" type="button">📱 扫码获取订阅（生成二维码）</button>
-        <span class="sub-qr-hint">把当前格式的配置临时托管到本站（24 小时），手机扫码即可导入，不用手动传文件。</span>
+        <span class="sub-qr-hint">把当前格式的配置托管到本站，手机扫码即可导入，不用手动传文件。有效期可选 24 小时 / 7 天 / 常驻。</span>
+      </div>
+      <div class="row tight">
+        <label for="subTier">订阅有效期：</label>
+        <select id="subTier">
+          <option value="24h" selected>24 小时（最安全，到期自动失效）</option>
+          <option value="7d">7 天</option>
+          <option value="perm">常驻（长期有效，可更新内容、可轮换吊销）</option>
+        </select>
       </div>
       <div id="subQrPanel" class="sub-qr-panel hidden">
         <div id="subQrBox" class="sub-qr-box"></div>
         <div class="sub-qr-side">
-          <p><b>订阅链接（24 小时内有效）：</b></p>
+          <p><b id="subQrValidity">订阅链接：</b></p>
           <p><a id="subQrLink" href="#" target="_blank" rel="noopener"></a></p>
-          <p class="sub-qr-warn">⚠️ 链接里包含你的 WARP 私钥，只扫自己的设备，不要外传、不要截图发群。过期后重新生成即可。</p>
+          <p class="sub-qr-warn">⚠️ 链接里包含你的 WARP 私钥，只扫自己的设备，不要外传、不要截图发群。</p>
           <p id="subQrTip" class="sub-qr-tip"></p>
         </div>
       </div>
       <p id="subQrError" class="sub-qr-error hidden"></p>
+      <div id="permSubBox" class="perm-sub-box hidden">
+        <p><b>🔑 我的常驻订阅</b>（链接不变：换配置点「更新为当前配置」即可，不用重新扫码）</p>
+        <p><a id="permSubLink" href="#" target="_blank" rel="noopener"></a></p>
+        <div class="row tight">
+          <button id="permSubUpdate" type="button">更新为当前配置</button>
+          <button id="permSubRotate" type="button">轮换链接（旧链接立即失效）</button>
+          <button id="permSubRevoke" type="button">删除常驻订阅</button>
+        </div>
+        <p class="perm-sub-note">常驻链接长期有效且包含私钥：不要外传；怀疑泄露就点「轮换链接」，旧链接立刻作废、新链接要重新导入一次。</p>
+        <p id="permSubMsg" class="perm-sub-msg hidden"></p>
+      </div>
     </div>
 
     <textarea id="mainOutput" readonly spellcheck="false"
@@ -798,6 +817,6 @@
 
 <script src="./qrcode.js?v=621"></script>
 <script src="./usque-register.js?v=621"></script>
-<script src="./app.js?v=621"></script>
+<script src="./app.js?v=622"></script>
 </body>
 </html>

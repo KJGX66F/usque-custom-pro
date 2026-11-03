@@ -212,12 +212,15 @@ async function relayEnroll(request) {
 }
 
 // ---------- Hosted subscription (QR-code import) ----------
-// POST /api/sub {format, content} stores the generated config in KV
-// (binding name: SUB_KV) under an unguessable token for 24 hours and
-// returns a fetchable URL. GET /sub/<token> serves it to proxy clients.
-// The stored config contains the user's WARP private key, so the token
-// URL is a credential: never log it, never list keys, it expires by TTL.
-const SUB_TTL_SECONDS = 86400;
+// POST /api/sub {format, content, tier} stores the generated config in KV
+// (binding name: SUB_KV) under an unguessable token and returns a fetchable
+// URL. tier: "24h" (default) / "7d" expire by TTL; "perm" never expires and
+// supports in-place update (/api/sub/update), rotation (/api/sub/rotate,
+// old link dies immediately) and revocation (/api/sub/revoke).
+// GET /sub/<token> serves it to proxy clients. The stored config contains
+// the user's WARP private key, so the token URL is a credential: never
+// log it, never list keys.
+const SUB_TIERS = { "24h": 86400, "7d": 604800, "perm": 0 };
 const SUB_FORMATS = {
   native: { type: "application/json; charset=UTF-8", filename: "usque-config.json" },
   clash: { type: "text/yaml; charset=UTF-8", filename: "masque-clash-smart.yaml" },
@@ -246,13 +249,73 @@ async function createSubscription(request, env) {
   const meta = SUB_FORMATS[body.format];
   const content = typeof body.content === "string" ? body.content : "";
   if (!meta || !content || content.length > 200000) return json({ message: "format 或 content 无效" }, 400);
+  const tier = body.tier === undefined ? "24h" : body.tier;
+  if (!(tier in SUB_TIERS)) return json({ message: "tier 无效（可选 24h / 7d / perm）" }, 400);
+  const ttl = SUB_TIERS[tier];
   const token = subToken();
-  await env.SUB_KV.put(`sub:${token}`, content, {
-    expirationTtl: SUB_TTL_SECONDS,
-    metadata: { type: meta.type, filename: meta.filename }
-  });
+  const putOptions = { metadata: { type: meta.type, filename: meta.filename, tier } };
+  if (ttl > 0) putOptions.expirationTtl = ttl;
+  await env.SUB_KV.put(`sub:${token}`, content, putOptions);
   const origin = new URL(request.url).origin;
-  return json({ ok: true, url: `${origin}/sub/${token}`, expiresInSeconds: SUB_TTL_SECONDS });
+  return json({ ok: true, url: `${origin}/sub/${token}`, token, tier, expiresInSeconds: ttl > 0 ? ttl : null });
+}
+
+function subKvMissing(env) {
+  return !env?.SUB_KV
+    ? json({ message: "订阅托管未启用：请先在 Cloudflare 给本项目绑定 KV 命名空间，变量名必须为 SUB_KV（步骤见 README「扫码获取订阅」）。" }, 503)
+    : null;
+}
+
+async function readSubJson(request) {
+  const type = request.headers.get("Content-Type") || "";
+  if (!type.toLowerCase().includes("application/json")) return { error: json({ message: "Content-Type 必须为 application/json" }, 400) };
+  const text = await request.text();
+  if (text.length > 262144) return { error: json({ message: "请求内容过大" }, 413) };
+  try { return { body: JSON.parse(text || "{}") }; } catch { return { error: json({ message: "JSON 格式无效" }, 400) }; }
+}
+
+async function loadPermSubscription(env, token) {
+  if (!/^[a-f0-9]{48}$/.test(token || "")) return { error: json({ message: "token 无效" }, 400) };
+  const got = await env.SUB_KV.getWithMetadata(`sub:${token}`);
+  if (!got || !got.value) return { error: json({ message: "订阅不存在或已过期，请重新生成。" }, 404) };
+  if ((got.metadata || {}).tier !== "perm") return { error: json({ message: "只有常驻订阅支持此操作。" }, 400) };
+  return { got };
+}
+
+async function updateSubscription(request, env) {
+  const missing = subKvMissing(env); if (missing) return missing;
+  if (!allowedSameOrigin(request)) return json({ message: "Origin 不被允许" }, 403);
+  const parsed = await readSubJson(request); if (parsed.error) return parsed.error;
+  const loaded = await loadPermSubscription(env, parsed.body.token); if (loaded.error) return loaded.error;
+  const meta = SUB_FORMATS[parsed.body.format];
+  const content = typeof parsed.body.content === "string" ? parsed.body.content : "";
+  if (!meta || !content || content.length > 200000) return json({ message: "format 或 content 无效" }, 400);
+  await env.SUB_KV.put(`sub:${parsed.body.token}`, content, {
+    metadata: { type: meta.type, filename: meta.filename, tier: "perm" }
+  });
+  return json({ ok: true });
+}
+
+async function rotateSubscription(request, env) {
+  const missing = subKvMissing(env); if (missing) return missing;
+  if (!allowedSameOrigin(request)) return json({ message: "Origin 不被允许" }, 403);
+  const parsed = await readSubJson(request); if (parsed.error) return parsed.error;
+  const loaded = await loadPermSubscription(env, parsed.body.token); if (loaded.error) return loaded.error;
+  const token = subToken();
+  await env.SUB_KV.put(`sub:${token}`, loaded.got.value, { metadata: loaded.got.metadata });
+  await env.SUB_KV.delete(`sub:${parsed.body.token}`);
+  const origin = new URL(request.url).origin;
+  return json({ ok: true, url: `${origin}/sub/${token}`, token, tier: "perm", expiresInSeconds: null });
+}
+
+async function revokeSubscription(request, env) {
+  const missing = subKvMissing(env); if (missing) return missing;
+  if (!allowedSameOrigin(request)) return json({ message: "Origin 不被允许" }, 403);
+  const parsed = await readSubJson(request); if (parsed.error) return parsed.error;
+  const token = parsed.body.token;
+  if (!/^[a-f0-9]{48}$/.test(token || "")) return json({ message: "token 无效" }, 400);
+  await env.SUB_KV.delete(`sub:${token}`);
+  return json({ ok: true });
 }
 
 async function serveSubscription(request, env, token) {
@@ -261,15 +324,14 @@ async function serveSubscription(request, env, token) {
   const got = await env.SUB_KV.getWithMetadata(`sub:${token}`);
   if (!got || !got.value) return new Response("Subscription not found or expired.", { status: 404 });
   const meta = got.metadata || {};
-  return new Response(got.value, {
-    status: 200,
-    headers: {
-      "Content-Type": meta.type || "text/plain; charset=UTF-8",
-      "Content-Disposition": `inline; filename="${meta.filename || "subscription.txt"}"`,
-      "Cache-Control": "no-store",
-      "X-Content-Type-Options": "nosniff"
-    }
-  });
+  const headers = {
+    "Content-Type": meta.type || "text/plain; charset=UTF-8",
+    "Content-Disposition": `inline; filename="${meta.filename || "subscription.txt"}"`,
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff"
+  };
+  if (meta.tier === "perm") headers["profile-update-interval"] = "24";
+  return new Response(got.value, { status: 200, headers });
 }
 
 export default {
@@ -305,6 +367,15 @@ export default {
         return json({ message: "Method Not Allowed" }, 405, { "Allow": "POST" });
       }
       return createSubscription(request, env);
+    }
+
+    if (url.pathname === "/api/sub/update" || url.pathname === "/api/sub/rotate" || url.pathname === "/api/sub/revoke") {
+      if (request.method !== "POST") {
+        return json({ message: "Method Not Allowed" }, 405, { "Allow": "POST" });
+      }
+      if (url.pathname.endsWith("update")) return updateSubscription(request, env);
+      if (url.pathname.endsWith("rotate")) return rotateSubscription(request, env);
+      return revokeSubscription(request, env);
     }
 
     if (url.pathname.startsWith("/sub/")) {
