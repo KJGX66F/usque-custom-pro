@@ -1,4 +1,4 @@
-# Usque MASQUE Pro v6.17 — 动态地区规则 + 完整策略组
+# Usque MASQUE Pro v6.18 — 免费落地多源合并 + 完整策略组
 
 > 基于 Cloudflare WARP / MASQUE 的可视化注册、配置生成与多客户端转换工具。  
 > 支持 **Cloudflare Pages + Cloudflare Workers 双部署**，浏览器完成 Usque 注册、原生配置保存、MASQUE 多节点生成、Clash/Mihomo 智能分流、Shadowrocket、sing-box、本地 VLESS 桥接，以及可选的 WARP 出口检测。
@@ -246,6 +246,27 @@ VLESS 本地桥接
 - 根据国家偏好自动选择候选节点
 
 这个功能默认折叠，新手可以完全不使用。
+
+---
+
+## 9. 免费落地多源合并（v6.18 新增）
+
+免费落地节点默认多源合并拉取：
+
+```
+主源 Au1rxx/free-vpn-subscriptions（按国家 Clash YAML）
+        +
+ermaozi / cbusifabcap / LeilaoMi真测 / ALIILAPRO（公共链接源）
+        ↓
+mihomo proxy-provider 分别拉取（每小时自动更新）
+        ↓
+同一批 url-test 组一起测活竞速，哪个快用哪个
+```
+
+- 多源合并可在面板里关闭，关掉后只用主源 Au1rxx
+- 4 个公共源不分国家，只进「免费落地自动 / AI / 流媒体」总组，不进国家组
+- 稳定模式的协议排除（Hysteria2 / TUIC / WireGuard / HTTP / SOCKS）对所有源一致生效
+- 不同源之间可能有个别重复节点，测速会自动选最快的一个，不影响使用
 
 ---
 

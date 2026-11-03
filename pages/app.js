@@ -422,6 +422,7 @@ function opts(){
   freeUseWarp:$("freeUseWarp").checked,
   freeScope:$("freeScope").value,
   freeProtocolMode:$("freeProtocolMode").value,
+  freeMultiSource:$("freeMultiSource")?.checked??true,
   freeCountries:uniq([...baseFreeCountries,...($("customIpRoutingEnabled")?.checked?customParsed.countries:[])]),
   customIpEnabled:$("customIpRoutingEnabled")?.checked||false,
   customIpRules:customParsed.rules,
@@ -565,6 +566,44 @@ function freeProviderId(code,kind="general"){return `FREE-${code}-${kind.toUpper
 function freeProviderUrl(code){
  return `https://raw.githubusercontent.com/Au1rxx/free-vpn-subscriptions/main/output/by-country/clash-${code}.yaml`;
 }
+// 多源合并：主源 Au1rxx（按国家）之外，再并入 4 个公共链接源（无国家归属）。
+// 与主源一样走 mihomo proxy-provider：客户端分别拉取、在同一批 url-test 组里
+// 一起测活竞速。这些源是 vless/vmess/trojan/ss 等链接列表，mihomo 可直接解析。
+const FREE_MIX_SOURCES=[
+ {key:"ermaozi",label:"ermaozi",url:"https://raw.githubusercontent.com/ermaozi/get_subscribe/main/subscribe/v2ray.txt"},
+ {key:"cbusifab",label:"cbusifabcap",url:"https://raw.githubusercontent.com/cbusifabcap/daily_free_vpn/main/Z.txt"},
+ {key:"leilao",label:"LeilaoMi真测",url:"https://raw.githubusercontent.com/LeilaoMi/AutoMergePublicNodes-Optimized/main/output/global.urls"},
+ {key:"aliilapro",label:"ALIILAPRO",url:"https://raw.githubusercontent.com/ALIILAPRO/v2rayNG-Config/main/sub.txt"}
+];
+function mixProviderId(srcKey,kind="general"){return `FREE-MIX-${srcKey.toUpperCase()}-${kind.toUpperCase()}`}
+function appendOneMixProvider(a,o,src,kind){
+ const hc=providerHealth(kind);
+ const pid=mixProviderId(src.key,kind);
+ a.push(
+   `  ${pid}:`,
+   "    type: http",
+   `    url: ${q(src.url)}`,
+   `    path: ${q(`./providers/free-mix-${src.key}-${kind}.yaml`)}`,
+   "    interval: 3600",
+   "    size-limit: 8388608"
+ );
+ if(o.freeUseWarp)a.push('    proxy: "WARP中转"');
+ if(o.freeProtocolMode==="stable"){
+   a.push('    exclude-type: "hysteria2|tuic|wireguard|http|https|socks4|socks5"');
+ }
+ a.push(
+   "    health-check:",
+   "      enable: true",
+   `      url: ${q(hc.url)}`,
+   `      expected-status: ${q(hc.expected)}`,
+   `      interval: ${hc.interval}`,
+   `      timeout: ${hc.timeout}`,
+   "      lazy: false",
+   "    override:",
+   `      additional-prefix: ${q(`🌐 ${src.label} | `)}`
+ );
+ if(o.freeUseWarp)a.push('      dialer-proxy: "WARP中转"');
+}
 function freeForService(o,name){
  if(!o.freeEnabled||!o.freeCountries.length)return false;
  const s=o.freeScope||"ai-streaming";
@@ -638,9 +677,17 @@ function appendFreeProviders(a,o){
    appendOneFreeProvider(a,o,code,"ai");
    appendOneFreeProvider(a,o,code,"stream");
  }
+ if(o.freeMultiSource){
+   for(const src of FREE_MIX_SOURCES){
+     appendOneMixProvider(a,o,src,"general");
+     appendOneMixProvider(a,o,src,"ai");
+     appendOneMixProvider(a,o,src,"stream");
+   }
+ }
 }
 function appendProviderUse(a,o,kind="general",indent="      "){
  for(const code of o.freeCountries)a.push(`${indent}- ${q(freeProviderId(code,kind))}`);
+ if(o.freeMultiSource)for(const src of FREE_MIX_SOURCES)a.push(`${indent}- ${q(mixProviderId(src.key,kind))}`);
 }
 
 function countryRuleName(code){
@@ -962,7 +1009,7 @@ function buildClash(){
    throw new Error("自定义 IP 规则使用了地区/免费出口，但免费落地节点已关闭。请启用免费落地，或把目标改成 WARP / DIRECT。");
  }
  const a=[
-  `# ${o.profile} - Clash / Mihomo MASQUE v6.17 Dynamic-Country-Rules`,
+  `# ${o.profile} - Clash / Mihomo MASQUE v6.18 Multi-Source-Free-Egress`,
   "mixed-port: 7890","allow-lan: false","mode: rule","log-level: info","ipv6: true","unified-delay: true","tcp-concurrent: true","keep-alive-interval: 15","keep-alive-idle: 15"
  ];
  if(o.enableControllerApi){
@@ -1203,7 +1250,7 @@ function resetRecommended(){
  $("egressChatgptFirst").checked=true;$("egressApplyAll").checked=false;$("enableControllerApi").checked=true;
  $("nodeTag").value="CDN";$("profileName").value="MASQUE-Pro";$("nodeCountMode").value="13";$("customNodeCount").value="100";$("nodeBuildMode").value="balanced";$("extraEndpoints").value="";$("nodeNaming").value="detail";
  $("udpForward").checked=true;$("remoteDns").checked=true;$("autoSelect").checked=true;$("showIcons").checked=true;$("adBlock").checked=true;$("includeTestEndpoints").checked=true;$("dedupeNodes").checked=true;$("h2ExtendedPool").checked=true;
- $("freeEgressEnabled").checked=true;$("freeUseWarp").checked=true;$("freeScope").value="ai-streaming";$("freeProtocolMode").value="stable";
+ $("freeEgressEnabled").checked=true;$("freeUseWarp").checked=true;$("freeScope").value="ai-streaming";$("freeProtocolMode").value="stable";$("freeMultiSource").checked=true;
  $("freeUS").checked=true;$("freeJP").checked=true;$("freeSG").checked=true;$("freeHK").checked=false;$("freeTW").checked=false;$("freeKR").checked=false;
  $("customIpRoutingEnabled").checked=false;$("customIpRoutingRules").value="";
  syncConditional();updateEstimate();updateFreeEgressHint();updateCustomIpRoutingHint();
@@ -1232,7 +1279,7 @@ function syncConditional(){
  if($("networkMode").value==="h3-l4proxy")$("udpForward").checked=false;
 }
 
-const selectSettingIds=["freeEgressEnabled","freeUseWarp","freeScope","freeProtocolMode","freeUS","freeJP","freeSG","freeHK","freeTW","freeKR","customIpRoutingEnabled","endpointPreset","portPreset","sniPreset","dnsPreset","innerIpMode","networkMode","stackMode","ccMode","outerCc","bbrProfile","mtuPreset","handshakeTimeout","ruleMode","healthUrl","healthInterval","healthTolerance","aiHealthMode","chatgptRouteMode","otherAiRouteMode","chatgptDirectFallback","egressCountry1","egressCountry2","egressCountry3","egressChatgptFirst","egressApplyAll","enableControllerApi","nodeCountMode","nodeBuildMode","nodeNaming","udpForward","remoteDns","autoSelect","showIcons","adBlock","includeTestEndpoints","dedupeNodes","h2ExtendedPool"];
+const selectSettingIds=["freeEgressEnabled","freeUseWarp","freeScope","freeProtocolMode","freeMultiSource","freeUS","freeJP","freeSG","freeHK","freeTW","freeKR","customIpRoutingEnabled","endpointPreset","portPreset","sniPreset","dnsPreset","innerIpMode","networkMode","stackMode","ccMode","outerCc","bbrProfile","mtuPreset","handshakeTimeout","ruleMode","healthUrl","healthInterval","healthTolerance","aiHealthMode","chatgptRouteMode","otherAiRouteMode","chatgptDirectFallback","egressCountry1","egressCountry2","egressCountry3","egressChatgptFirst","egressApplyAll","enableControllerApi","nodeCountMode","nodeBuildMode","nodeNaming","udpForward","remoteDns","autoSelect","showIcons","adBlock","includeTestEndpoints","dedupeNodes","h2ExtendedPool"];
 selectSettingIds.forEach(id=>$(id).addEventListener("change",()=>{
  syncConditional();updateEstimate();
  if(id==="chatgptRouteMode"||id==="otherAiRouteMode")updateChatgptRouteHint();
