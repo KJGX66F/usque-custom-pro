@@ -11,7 +11,7 @@
 <body>
 <main class="wrap pro-wrap">
   <header class="hero pro-hero">
-    <span class="badge">v6.26 · P2 小件：更新提示 / 向导演示 / SNI 轮换 / 诊断导出</span>
+    <span class="badge">v6.27 · 延迟优化：入口与测速参数调优</span>
     <h1>Usque MASQUE → Clash 小白版</h1>
 
     <a 
@@ -340,7 +340,8 @@
       <label>
         <span>SNI 域名</span>
         <select id="sniPreset">
-          <option value="www.microsoft.com">微软 | www.microsoft.com（推荐）</option>
+          <option value="speed.cloudflare.com">Cloudflare 测速 | speed.cloudflare.com（推荐）</option>
+          <option value="www.microsoft.com">微软 | www.microsoft.com</option>
           <option value="www.wikipedia.org">维基百科 | www.wikipedia.org</option>
           <option value="www.unilever.com">联合利华 | www.unilever.com</option>
           <option value="www.luckincoffee.com">瑞幸咖啡 | www.luckincoffee.com</option>
@@ -353,7 +354,6 @@
           <option value="cdn.jsdelivr.net">CDN 分发 | cdn.jsdelivr.net</option>
           <option value="www.speedtest.net">SpeedTest | www.speedtest.net</option>
           <option value="www.cloudflare.com">Cloudflare 官网 | www.cloudflare.com</option>
-          <option value="speed.cloudflare.com">Cloudflare 测速 | speed.cloudflare.com</option>
           <option value="cloudflare.dev">Cloudflare 开发者 | cloudflare.dev</option>
           <option value="research.cloudflare.com">Cloudflare 研究团队 | research.cloudflare.com</option>
           <option value="consumer-masque.cloudflareclient.com">MASQUE 默认 | consumer-masque.cloudflareclient.com</option>
@@ -468,9 +468,9 @@
       <label>
         <span>MTU</span>
         <select id="mtuPreset">
-          <option value="1280">1280（推荐）</option>
+          <option value="1280">1280（稳定档 · 推荐）</option>
           <option value="1360">1360</option>
-          <option value="1400">1400</option>
+          <option value="1400">1400（速度档）</option>
           <option value="1500">1500</option>
           <option value="custom">自定义</option>
         </select>
@@ -484,11 +484,12 @@
       <label>
         <span>握手超时</span>
         <select id="handshakeTimeout">
-          <option value="0">默认（0）</option>
+          <option value="5">5 秒（推荐）</option>
           <option value="10">10 秒</option>
           <option value="20">20 秒</option>
           <option value="30">30 秒</option>
           <option value="45">45 秒</option>
+          <option value="0">不限制（0）</option>
         </select>
       </label>
 
@@ -531,8 +532,8 @@
       <label>
         <span>测速容差</span>
         <select id="healthTolerance">
+          <option value="50">50 ms（推荐）</option>
           <option value="30">30 ms</option>
-          <option value="50">50 ms</option>
           <option value="100">100 ms</option>
         </select>
       </label>
@@ -550,10 +551,11 @@
       <label>
         <span>节点数量模式</span>
         <select id="nodeCountMode">
-          <option value="13">精选 13 节点（推荐）</option>
-          <option value="32">增强 32 节点</option>
-          <option value="64">全量 64 节点</option>
-          <option value="100">超全量 100 节点</option>
+          <option value="48">甜点 48 节点（推荐）</option>
+          <option value="32">轻量 32 节点</option>
+          <option value="64">增强 64 节点</option>
+          <option value="13">精选 13 节点</option>
+          <option value="100">100 节点（节点多更卡，不推荐）</option>
           <option value="custom">自定义数量</option>
         </select>
       </label>
@@ -593,7 +595,7 @@
       <label class="switch-pro"><input id="adBlock" type="checkbox" checked><span>广告拦截</span></label>
       <label class="switch-pro"><input id="includeTestEndpoints" type="checkbox" checked><span>包含测试域名 Endpoint</span></label>
       <label class="switch-pro"><input id="dedupeNodes" type="checkbox" checked><span>节点自动去重</span></label>
-      <label class="switch-pro"><input id="h2ExtendedPool" type="checkbox" checked><span>H2 扩展地址池（100～500 节点）</span></label>
+      <label class="switch-pro"><input id="h2ExtendedPool" type="checkbox" checked><span>H2 扩展地址池（100～500 节点 · 随机抽样、未逐个验证）</span></label>
     </div>
 
       </div>
@@ -895,6 +897,6 @@
 
 <script src="./qrcode.js?v=621"></script>
 <script src="./usque-register.js?v=621"></script>
-<script src="./app.js?v=626"></script>
+<script src="./app.js?v=627"></script>
 </body>
 </html>

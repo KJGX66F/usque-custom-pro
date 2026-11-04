@@ -20,6 +20,7 @@ const ENDPOINTS={
   bestcf2:"masque2.bestcf.eu.cc"
 };
 let remoteCuratedPairs=null,remoteTestPairs=null,remoteH2Prefixes=null;
+let currentPairServers=[];
 const DNS_PRESETS={
   "cf-google-dual":["1.1.1.1","8.8.8.8","2606:4700:4700::1111","2001:4860:4860::8888"],
   "cf-dual":["1.1.1.1","1.0.0.1","2606:4700:4700::1111","2606:4700:4700::1001"],
@@ -238,10 +239,10 @@ function curatedPairs(){
   return rp;
  }
  const pairs=[
-  ["162.159.198.1",443],
-  ["162.159.198.1",500],
   ["162.159.198.2",443],
+  ["162.159.198.1",443],
   ["162.159.198.2",500],
+  ["162.159.198.1",500],
   ["162.159.198.2",4500],
   ["162.159.198.2",8095],
   ["2606:4700:103::1",443],
@@ -306,6 +307,12 @@ function expandedPortList(){
  return portList();
 }
 
+function h2PriorityEndpoints(){
+ const prefixes=(remoteH2Prefixes&&remoteH2Prefixes.length?remoteH2Prefixes:["162.159.198","162.159.199"]);
+ const out=[];
+ for(const p of prefixes){out.push(`${p}.1`,`${p}.2`);}
+ return out;
+}
 function h2Ipv4Endpoints(limit=508){
  const out=[];
  // warpscout currently treats these two /24s as the H2 IPv4 pool.
@@ -324,7 +331,9 @@ function h2ConnectionPairs(target,build){
  let endpoints=[];
 
  if($("h2ExtendedPool")?.checked){
-   endpoints=uniq([...sourceH2,...h2Ipv4Endpoints(508),...extraEndpointList()]);
+   const priority=uniq([...sourceH2,...h2PriorityEndpoints()]);
+   const rest=h2Ipv4Endpoints(508).filter(ep=>!priority.includes(ep));
+   endpoints=uniq([...priority,...stableShuffle(rest),...extraEndpointList()]);
  }else{
    endpoints=uniq([...sourceH2,...extraEndpointList()]);
  }
@@ -608,7 +617,7 @@ function appendOneMixProvider(a,o,src,kind,prefix="FREE-MIX",seg="free-mix",icon
    `      expected-status: ${q(hc.expected)}`,
    `      interval: ${hc.interval}`,
    `      timeout: ${hc.timeout}`,
-   "      lazy: false",
+   "      lazy: true",
    "    override:",
    `      additional-prefix: ${q(`${icon} ${src.label} | `)}`
  );
@@ -645,20 +654,20 @@ function providerHealth(kind){
  if(kind==="ai")return {
    url:"https://chatgpt.com/",
    expected:"200-399",
-   interval:120,
-   timeout:9000
+   interval:300,
+   timeout:5000
  };
  if(kind==="stream")return {
    url:"https://www.netflix.com/",
    expected:"200-399",
-   interval:120,
-   timeout:9000
+   interval:300,
+   timeout:5000
  };
  return {
    url:"https://www.gstatic.com/generate_204",
    expected:"204",
-   interval:120,
-   timeout:5000
+   interval:300,
+   timeout:3000
  };
 }
 function appendOneFreeProvider(a,o,code,kind){
@@ -684,7 +693,7 @@ function appendOneFreeProvider(a,o,code,kind){
    `      expected-status: ${q(hc.expected)}`,
    `      interval: ${hc.interval}`,
    `      timeout: ${hc.timeout}`,
-   "      lazy: false",
+   "      lazy: true",
    "    override:",
    `      additional-prefix: ${q(`${meta.flag} ${code} | `)}`
  );
@@ -753,19 +762,43 @@ function appendCustomIpRules(a,o){
  a.push("");
 }
 
+function buildEndpointSubgroups(names){
+ if(!currentPairServers.length||currentPairServers.length!==names.length)return {groups:[],singles:names};
+ const byEp=new Map();
+ names.forEach((n,i)=>{const ep=currentPairServers[i];if(!byEp.has(ep))byEp.set(ep,[]);byEp.get(ep).push(n);});
+ const groups=[],singles=[];
+ for(const [ep,members] of byEp){
+  if(members.length>1)groups.push({name:`EP ${ep}`,members});
+  else singles.push(members[0]);
+ }
+ if(!groups.length)return {groups:[],singles:names};
+ return {groups,singles};
+}
 function clashGroupsAndRules(names,o){
  const a=["","proxy-groups:"];
  const freeOn=o.freeEnabled&&(o.freeCountries.length>0||(o.freeCustomSources||[]).length>0);
 
+ const epSub=buildEndpointSubgroups(names);
+ for(const g of epSub.groups){
+  a.push(`  - name: ${q(g.name)}`,"    type: url-test","    hidden: true",
+   `    url: ${q(o.healthUrl)}`,`    interval: ${Number(o.healthInterval)||300}`,`    tolerance: ${Number(o.tolerance)||50}`,
+   "    timeout: 3000","    lazy: true","    max-failed-times: 2","    proxies:");
+  appendRawNodes(a,g.members);
+ }
  groupHeader(a,"🚀 WARP自动","url-test");
  a.push(
    "    hidden: true",
    `    url: ${q(o.healthUrl)}`,
-   `    interval: ${Math.min(Number(o.healthInterval)||300,180)}`,
-   `    tolerance: ${Math.min(Number(o.tolerance)||30,40)}`,
-   "    timeout: 5000","    lazy: false","    max-failed-times: 2","    proxies:"
+   `    interval: ${Number(o.healthInterval)||300}`,
+   `    tolerance: ${Number(o.tolerance)||50}`,
+   "    timeout: 3000","    lazy: true","    max-failed-times: 2","    proxies:"
  );
- appendRawNodes(a,names);
+ if(epSub.groups.length){
+  for(const g of epSub.groups)a.push(`      - ${q(g.name)}`);
+  appendRawNodes(a,epSub.singles);
+ }else{
+  appendRawNodes(a,names);
+ }
 
  groupHeader(a,"🌎 WARP可手动");
  a.push("    proxies:",'      - "🚀 WARP自动"');
@@ -778,21 +811,21 @@ function clashGroupsAndRules(names,o){
    groupHeader(a,"⚡ 免费落地自动","url-test");
    a.push(
      "    hidden: true","    url: https://www.gstatic.com/generate_204","    expected-status: 204",
-     "    interval: 120","    tolerance: 30","    timeout: 5000","    lazy: false","    max-failed-times: 2","    use:"
+     "    interval: 300","    tolerance: 50","    timeout: 3000","    lazy: true","    max-failed-times: 2","    use:"
    );
    appendProviderUse(a,o,"general");
 
    groupHeader(a,"🤖 AI自动优选","url-test");
    a.push(
      "    hidden: true","    url: https://chatgpt.com/","    expected-status: 200-399",
-     "    interval: 120","    tolerance: 30","    timeout: 9000","    lazy: false","    max-failed-times: 2","    use:"
+     "    interval: 300","    tolerance: 50","    timeout: 5000","    lazy: true","    max-failed-times: 2","    use:"
    );
    appendProviderUse(a,o,"ai");
 
    groupHeader(a,"🎬 流媒体自动优选","url-test");
    a.push(
      "    hidden: true","    url: https://www.netflix.com/","    expected-status: 200-399",
-     "    interval: 120","    tolerance: 30","    timeout: 9000","    lazy: false","    max-failed-times: 2","    use:"
+     "    interval: 300","    tolerance: 50","    timeout: 5000","    lazy: true","    max-failed-times: 2","    use:"
    );
    appendProviderUse(a,o,"stream");
 
@@ -806,7 +839,7 @@ function clashGroupsAndRules(names,o){
      a.push(
        "    hidden: true",
        "    url: https://www.gstatic.com/generate_204","    expected-status: 204",
-       "    interval: 120","    tolerance: 20","    timeout: 5000","    lazy: false","    max-failed-times: 2",
+       "    interval: 300","    tolerance: 50","    timeout: 3000","    lazy: true","    max-failed-times: 2",
        "    use:",`      - ${q(freeProviderId(code,"general"))}`
      );
    }
@@ -816,7 +849,7 @@ function clashGroupsAndRules(names,o){
  groupHeader(a,"♻️ 自动选择","url-test");
  a.push(
    "    url: https://www.gstatic.com/generate_204","    expected-status: 204",
-   "    interval: 120","    tolerance: 20","    timeout: 5000","    lazy: false","    max-failed-times: 2","    proxies:"
+   `    interval: ${Number(o.healthInterval)||300}`,`    tolerance: ${Number(o.tolerance)||50}`,"    timeout: 3000","    lazy: true","    max-failed-times: 2","    proxies:"
  );
  if(freeOn)appendCountryChoices(a,o);
  a.push('      - "🚀 WARP自动"');
@@ -824,7 +857,7 @@ function clashGroupsAndRules(names,o){
  groupHeader(a,"🛡️ 故障转移","fallback");
  a.push(
    "    url: https://www.gstatic.com/generate_204","    expected-status: 204",
-   "    interval: 60","    timeout: 5000","    lazy: false","    max-failed-times: 1","    proxies:"
+   "    interval: 60","    timeout: 3000","    lazy: true","    max-failed-times: 1","    proxies:"
  );
  if(freeOn)appendCountryChoices(a,o);
  a.push('      - "🚀 WARP自动"');
@@ -832,7 +865,7 @@ function clashGroupsAndRules(names,o){
  groupHeader(a,"⚖️ 负载均衡","load-balance");
  a.push(
    "    strategy: consistent-hashing",
-   "    url: https://www.gstatic.com/generate_204","    interval: 180","    timeout: 5000","    lazy: false"
+   "    url: https://www.gstatic.com/generate_204","    interval: 300","    timeout: 3000","    lazy: true"
  );
  if(freeOn){
    a.push("    use:");
@@ -876,7 +909,7 @@ function clashGroupsAndRules(names,o){
  groupHeader(a,"⚡ YouTube-WARP极速","url-test");
  a.push(
    "    hidden: true","    url: https://www.gstatic.com/generate_204","    expected-status: 204",
-   "    interval: 60","    tolerance: 10","    timeout: 4000","    lazy: false","    max-failed-times: 1","    proxies:"
+   "    interval: 60","    tolerance: 10","    timeout: 3000","    lazy: true","    max-failed-times: 1","    proxies:"
  );
  appendRawNodes(a,names);
 
@@ -884,7 +917,7 @@ function clashGroupsAndRules(names,o){
    groupHeader(a,"⚡ YouTube-免费极速","url-test");
    a.push(
      "    hidden: true","    url: https://www.gstatic.com/generate_204","    expected-status: 204",
-     "    interval: 60","    tolerance: 10","    timeout: 5000","    lazy: false","    max-failed-times: 1","    use:"
+     "    interval: 60","    tolerance: 10","    timeout: 3000","    lazy: true","    max-failed-times: 1","    use:"
    );
    appendProviderUse(a,o,"general");
  }
@@ -1054,6 +1087,7 @@ function buildClash(){
   "  nameserver:","    - https://doh.pub/dns-query","    - https://dns.alidns.com/dns-query",
   "","proxies:"
  );
+ currentPairServers=pairs.map(p=>String(p[0]));
  pairs.forEach(([server,port],i)=>{const n=nodeName(server,port,i);names.push(n);makeNode(a,n,server,port,o,i)});
  if(o.chain){
   a.push(`  - name: "⛓ 链式出口"`,`    type: ${o.chain.type}`,`    server: ${q(o.chain.host)}`,`    port: ${o.chain.port}`);
@@ -1072,6 +1106,7 @@ function buildShadowrocket(){
  const o=opts(),pairs=connectionPairs(),names=[];
  const a=[`# ${o.profile} - Shadowrocket 2.2.90+ MASQUE (Clash-compatible YAML)`,
  "mixed-port: 7890","mode: rule","ipv6: true","","proxies:"];
+ currentPairServers=pairs.map(p=>String(p[0]));
  pairs.forEach(([server,port],i)=>{const n=nodeName(server,port,i);names.push(n);makeNode(a,n,server,port,o,i)});
  a.push("","proxy-groups:",'  - name: "PROXY"',"    type: select","    proxies:");
  names.forEach(n=>a.push(`      - ${q(n)}`));a.push("      - DIRECT","","rules:","  - GEOIP,CN,DIRECT","  - MATCH,PROXY","");
@@ -1277,15 +1312,15 @@ function updateChatgptRouteHint(){
 }
 
 function resetRecommended(){
- $("endpointPreset").value="auto-curated";$("portPreset").value="recommended";$("sniPreset").value="www.microsoft.com";$("dnsPreset").value="cf-google-dual";
+ $("endpointPreset").value="auto-curated";$("portPreset").value="recommended";$("sniPreset").value="speed.cloudflare.com";$("dnsPreset").value="cf-google-dual";
  $("innerIpMode").value="dual";$("networkMode").value="quic";$("stackMode").value="auto";$("ccMode").value="cubic";$("outerCc").value="";$("bbrProfile").value="standard";
- $("mtuPreset").value="1280";$("handshakeTimeout").value="0";$("ruleMode").value="smart";$("healthUrl").value="http://cp.cloudflare.com/generate_204";
- $("healthInterval").value="300";$("healthTolerance").value="30";$("aiHealthMode").value="chatgpt";
+ $("mtuPreset").value="1280";$("handshakeTimeout").value="5";$("ruleMode").value="smart";$("healthUrl").value="http://cp.cloudflare.com/generate_204";
+ $("healthInterval").value="300";$("healthTolerance").value="50";$("aiHealthMode").value="chatgpt";
  $("chatgptRouteMode").value="DIRECT";$("otherAiRouteMode").value="AI";$("chatgptDirectFallback").checked=true;
  $("egressCountry1").value="";$("egressCountry2").value="";$("egressCountry3").value="";
  $("controllerUrl").value="http://127.0.0.1:9090";$("controllerSecret").value="";$("localProxyUrl").value="http://127.0.0.1:7890";
  $("egressChatgptFirst").checked=true;$("egressApplyAll").checked=false;$("enableControllerApi").checked=true;
- $("nodeTag").value="CDN";$("profileName").value="MASQUE-Pro";$("nodeCountMode").value="13";$("customNodeCount").value="100";$("nodeBuildMode").value="balanced";$("extraEndpoints").value="";$("nodeNaming").value="detail";
+ $("nodeTag").value="CDN";$("profileName").value="MASQUE-Pro";$("nodeCountMode").value="48";$("customNodeCount").value="100";$("nodeBuildMode").value="balanced";$("extraEndpoints").value="";$("nodeNaming").value="detail";
  $("udpForward").checked=true;$("remoteDns").checked=true;$("autoSelect").checked=true;$("showIcons").checked=true;$("adBlock").checked=true;$("includeTestEndpoints").checked=true;$("dedupeNodes").checked=true;$("h2ExtendedPool").checked=true;
  $("freeEgressEnabled").checked=true;$("freeUseWarp").checked=true;$("freeScope").value="ai-streaming";$("freeProtocolMode").value="stable";$("freeMultiSource").checked=true;$("freeCustomSources").value="";
  $("freeUS").checked=true;$("freeJP").checked=true;$("freeSG").checked=true;$("freeHK").checked=false;$("freeTW").checked=false;$("freeKR").checked=false;
@@ -1381,7 +1416,7 @@ $("fmtClash").addEventListener("click",()=>{try{setFormat("clash");toast(`Clash 
 $("fmtShadowrocket").addEventListener("click",()=>{try{setFormat("shadowrocket");toast(`Shadowrocket 配置已生成，共 ${connectionPairs().length} 个节点。`,"success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
 $("fmtSingbox").addEventListener("click",()=>{try{setFormat("singbox");toast("sing-box 兼容配置已生成。","success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
 $("fmtVless").addEventListener("click",()=>{try{setFormat("vless");toast("VLESS 本地桥接配置已生成。","success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
-const PANEL_VERSION="6.26";
+const PANEL_VERSION="6.27";
 function versionNewer(a,b){
  const pa=String(a).replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);
  const pb=String(b).replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);
