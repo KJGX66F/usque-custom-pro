@@ -277,7 +277,17 @@ function subKvMissing(env) {
 function ownerKeyOk(request, env) {
   const key = env?.SUB_OWNER_KEY;
   if (!key) return true;
-  return (request.headers.get("X-Sub-Owner") || "") === key;
+  const sent = request.headers.get("X-Sub-Owner") || "";
+  if (sent === key) return true;
+  // Keys with non-Latin-1 characters (e.g. Chinese) cannot travel raw in an
+  // HTTP header; the panel sends them as "b64:<base64 of UTF-8 bytes>".
+  if (sent.startsWith("b64:")) {
+    try {
+      const bytes = Uint8Array.from(atob(sent.slice(4)), c => c.charCodeAt(0));
+      if (new TextDecoder().decode(bytes) === key) return true;
+    } catch { /* malformed base64: fall through to false */ }
+  }
+  return false;
 }
 
 function ownerRequired() {

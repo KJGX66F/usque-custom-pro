@@ -1416,7 +1416,7 @@ $("fmtClash").addEventListener("click",()=>{try{setFormat("clash");toast(`Clash 
 $("fmtShadowrocket").addEventListener("click",()=>{try{setFormat("shadowrocket");toast(`Shadowrocket 配置已生成，共 ${connectionPairs().length} 个节点。`,"success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
 $("fmtSingbox").addEventListener("click",()=>{try{setFormat("singbox");toast("sing-box 兼容配置已生成。","success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
 $("fmtVless").addEventListener("click",()=>{try{setFormat("vless");toast("VLESS 本地桥接配置已生成。","success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
-const PANEL_VERSION="6.27";
+const PANEL_VERSION="6.28";
 function versionNewer(a,b){
  const pa=String(a).replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);
  const pb=String(b).replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);
@@ -1508,7 +1508,7 @@ $("exportDiagnostics")?.addEventListener("click",()=>{
 
 async function subApiGet(path,retry=true){
  const headers={};const ownerKey=loadSubOwnerKey();
- if(ownerKey)headers["X-Sub-Owner"]=ownerKey;
+ if(ownerKey)headers["X-Sub-Owner"]=encodeSubOwnerKey(ownerKey);
  const res=await fetch(path,{method:"GET",headers});
  const data=await res.json().catch(()=>({}));
  if(res.status===403&&data.code==="owner_required"){
@@ -1693,12 +1693,25 @@ function showSubQr(url,tier){
  renderSubImportLinks(url);wizSet(3);
 }
 const SUB_OWNER_KEY_LS="usque.subOwnerKey";
+// HTTP headers only allow Latin-1 (bytes 0-255): a key with Chinese, emoji or
+// full-width characters makes the browser refuse to send the request at all
+// ("String contains non ISO-8859-1 code point"). Encode such keys as base64
+// of their UTF-8 bytes with a "b64:" prefix; the backend decodes it before
+// comparing. Pure Latin-1 keys are sent unchanged, so existing ASCII keys
+// behave exactly as before.
+function encodeSubOwnerKey(key){
+ if(!key)return "";
+ if(!/[^\x00-\xFF]/.test(key))return key;
+ const bytes=new TextEncoder().encode(key);
+ let bin="";for(const b of bytes)bin+=String.fromCharCode(b);
+ return "b64:"+btoa(bin);
+}
 function loadSubOwnerKey(){try{return localStorage.getItem(SUB_OWNER_KEY_LS)||"";}catch{return "";}}
 function saveSubOwnerKey(v){try{if(v)localStorage.setItem(SUB_OWNER_KEY_LS,v);else localStorage.removeItem(SUB_OWNER_KEY_LS);}catch{}}
 async function subApi(path,body,retry=true){
  const headers={"Content-Type":"application/json"};
  const ownerKey=loadSubOwnerKey();
- if(ownerKey)headers["X-Sub-Owner"]=ownerKey;
+ if(ownerKey)headers["X-Sub-Owner"]=encodeSubOwnerKey(ownerKey);
  const res=await fetch(path,{method:"POST",headers,body:JSON.stringify(body)});
  const data=await res.json().catch(()=>({}));
  if(res.status===403&&data.code==="owner_required"){
