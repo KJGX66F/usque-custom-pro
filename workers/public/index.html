@@ -11,7 +11,7 @@
 <body>
 <main class="wrap pro-wrap">
   <header class="hero pro-hero">
-    <span class="badge">v6.28 · 修复：中文部署者口令可用（请求头编码）</span>
+    <span class="badge">v6.29 · 修复：GitHub 默认走代理 + 规则源换 jsdelivr 镜像</span>
     <h1>Usque MASQUE → Clash 小白版</h1>
     <a 
 
@@ -261,11 +261,11 @@
         <div>
           <p><b>内置节点源（共 5 个，全部一起拉取、在同一批自动测速组里竞速，哪个快用哪个）：</b></p>
           <ul class="source-list">
-            <li><b>主源 · Au1rxx/free-vpn-subscriptions</b>（按国家 Clash YAML，每小时更新）<a href="https://github.com/Au1rxx/free-vpn-subscriptions" target="_blank" rel="noopener">项目</a><br><code>raw.githubusercontent.com/Au1rxx/free-vpn-subscriptions/main/output/by-country/clash-国家代码.yaml</code>（按上方勾选的国家逐个拉取）</li>
-            <li><b>ermaozi</b> <a href="https://github.com/ermaozi/get_subscribe" target="_blank" rel="noopener">项目</a><br><code>raw.githubusercontent.com/ermaozi/get_subscribe/main/subscribe/v2ray.txt</code></li>
-            <li><b>cbusifabcap</b> <a href="https://github.com/cbusifabcap/daily_free_vpn" target="_blank" rel="noopener">项目</a><br><code>raw.githubusercontent.com/cbusifabcap/daily_free_vpn/main/Z.txt</code></li>
-            <li><b>LeilaoMi真测</b> <a href="https://github.com/LeilaoMi/AutoMergePublicNodes-Optimized" target="_blank" rel="noopener">项目</a><br><code>raw.githubusercontent.com/LeilaoMi/AutoMergePublicNodes-Optimized/main/output/global.urls</code></li>
-            <li><b>ALIILAPRO</b> <a href="https://github.com/ALIILAPRO/v2rayNG-Config" target="_blank" rel="noopener">项目</a><br><code>raw.githubusercontent.com/ALIILAPRO/v2rayNG-Config/main/sub.txt</code></li>
+            <li><b>主源 · Au1rxx/free-vpn-subscriptions</b>（按国家 Clash YAML，每小时更新）<a href="https://github.com/Au1rxx/free-vpn-subscriptions" target="_blank" rel="noopener">项目</a><br><code>cdn.jsdelivr.net/gh/Au1rxx/free-vpn-subscriptions@main/output/by-country/clash-国家代码.yaml</code>（按上方勾选的国家逐个拉取）</li>
+            <li><b>ermaozi</b> <a href="https://github.com/ermaozi/get_subscribe" target="_blank" rel="noopener">项目</a><br><code>cdn.jsdelivr.net/gh/ermaozi/get_subscribe@main/subscribe/v2ray.txt</code></li>
+            <li><b>cbusifabcap</b> <a href="https://github.com/cbusifabcap/daily_free_vpn" target="_blank" rel="noopener">项目</a><br><code>cdn.jsdelivr.net/gh/cbusifabcap/daily_free_vpn@main/Z.txt</code></li>
+            <li><b>LeilaoMi真测</b> <a href="https://github.com/LeilaoMi/AutoMergePublicNodes-Optimized" target="_blank" rel="noopener">项目</a><br><code>cdn.jsdelivr.net/gh/LeilaoMi/AutoMergePublicNodes-Optimized@main/output/global.urls</code></li>
+            <li><b>ALIILAPRO</b> <a href="https://github.com/ALIILAPRO/v2rayNG-Config" target="_blank" rel="noopener">项目</a><br><code>cdn.jsdelivr.net/gh/ALIILAPRO/v2rayNG-Config@main/sub.txt</code></li>
           </ul>
           <p>后 4 个源受上方「多源合并」开关控制（默认开）；它们不分国家，只进「免费落地自动 / AI / 流媒体」总组，不进国家组。不同源之间可能有个别重复节点，测速会自动选最快的一个，不影响使用。</p>
           <p>默认稳定模式会排除 Hysteria2 / TUIC / WireGuard / HTTP / SOCKS 等，更优先测试 VLESS / VMess / Trojan / Shadowsocks；想要全部协议，把上方「协议筛选」切到「全部协议」。所有源都由你的 Clash 客户端每小时自动重新拉取最新节点，本页面不保存、也不中转任何节点。</p>
@@ -896,6 +896,6 @@
 
 <script src="./qrcode.js?v=621"></script>
 <script src="./usque-register.js?v=621"></script>
-<script src="./app.js?v=628"></script>
+<script src="./app.js?v=629"></script>
 </body>
 </html>

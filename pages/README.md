@@ -1,4 +1,4 @@
-# Usque MASQUE v6.28 — 修复：中文部署者口令可用
+# Usque MASQUE v6.29 — 修复：GitHub 默认走代理 + 规则源换 jsdelivr 镜像
 
 核心逻辑：
 
@@ -61,7 +61,7 @@ Pages 部署方式不变：
 根目录：pages
 ```
 
-v6.18–v6.28 同步说明：
+v6.18–v6.29 同步说明：
 
 ```text
 v6.18 免费落地多源合并（Au1rxx + ermaozi / cbusifabcap / LeilaoMi真测 / ALIILAPRO）
@@ -75,6 +75,7 @@ v6.25 P1 功能包：账户库（多账户本地保存/切换）、恢复常驻�
 v6.26 P2 小件：面板新版本提示（查 GitHub 最新 Release）、新手向导 + 演示模式、SNI 候选池轮换、脱敏诊断导出、链式出口默认折叠、端点池清单双源读取（raw + jsdelivr）、英文 README、打 Tag 自动建 Release 的工作流
 v6.27 延迟调优：默认入口 162.159.198.2:443 优先、SNI 默认 Cloudflare 测速域、节点数默认甜点 48、测速 lazy + 300 秒间隔 + 3 秒超时 + 50ms 容差、「WARP自动」按入口 IP 分小组测速、H2 扩展池已知优先 + 随机抽样、握手超时默认 5 秒、MTU 稳定/速度两档标注
 v6.28 中文口令修复：含中文 / emoji / 全角字符的部署者口令改为 base64 编码进请求头、后端解码比对；纯英文数字口令行为不变
+v6.29 分流修复：微软服务组首选改成节点选择（GitHub 不再默认直连）、规则集与免费落地订阅地址全部改走 jsdelivr 镜像、图标地址同步改走 jsdelivr；附带修复 sing-box 引用的 geoip-private.srs（上游不存在，改走 geosite-private + 内置私网 IP 段规则）
 ```
 
 扫码功能需要给 Pages 项目绑定 KV（只需一次）：

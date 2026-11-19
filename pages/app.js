@@ -32,31 +32,31 @@ const DNS_PRESETS={
 };
 
 const CLASH_DOMAIN_RULESETS=[
-["bilibili","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/bilibili.mrs"],
-["cn","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs"],
-["category-ai-!cn","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ai-!cn.mrs"],
-["youtube","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs"],
-["netflix","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/netflix.mrs"],
-["disney","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/disney.mrs"],
-["spotify","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/spotify.mrs"],
-["tiktok","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/tiktok.mrs"],
-["primevideo","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/primevideo.mrs"],
-["hbo","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/hbo.mrs"],
-["emby","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-emby.mrs"],
-["telegram","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs"],
-["microsoft","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/microsoft.mrs"],
-["apple","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/apple.mrs"],
-["cloudflare","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cloudflare.mrs"],
-["geolocation-!cn","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.mrs"],
-["category-ads-all","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/category-ads-all.mrs"]
+["bilibili","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/bilibili.mrs"],
+["cn","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/cn.mrs"],
+["category-ai-!cn","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/category-ai-!cn.mrs"],
+["youtube","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/youtube.mrs"],
+["netflix","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/netflix.mrs"],
+["disney","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/disney.mrs"],
+["spotify","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/spotify.mrs"],
+["tiktok","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/tiktok.mrs"],
+["primevideo","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/primevideo.mrs"],
+["hbo","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/hbo.mrs"],
+["emby","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/category-emby.mrs"],
+["telegram","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/telegram.mrs"],
+["microsoft","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/microsoft.mrs"],
+["apple","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/apple.mrs"],
+["cloudflare","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/cloudflare.mrs"],
+["geolocation-!cn","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/geolocation-!cn.mrs"],
+["category-ads-all","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/category-ads-all.mrs"]
 ];
 const CLASH_IP_RULESETS=[
-["private_ip","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/private.mrs"],
-["netflix_ip","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/netflix.mrs"],
-["telegram_ip","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/telegram.mrs"],
-["cloudflare_ip","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/cloudflare.mrs"],
-["cn_ip","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/cn.mrs"],
-["ad_ip","https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geoip/ad.mrs"]
+["private_ip","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo-lite/geoip/private.mrs"],
+["netflix_ip","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo-lite/geoip/netflix.mrs"],
+["telegram_ip","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geoip/telegram.mrs"],
+["cloudflare_ip","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geoip/cloudflare.mrs"],
+["cn_ip","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo-lite/geoip/cn.mrs"],
+["ad_ip","https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geoip/ad.mrs"]
 ];
 
 function download(name,text,type="text/plain"){
@@ -554,7 +554,7 @@ function makeNode(a,name,server,port,o,idx=0){
 }
 
 function iconUrl(name){
- const base="https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/";
+ const base="https://cdn.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/";
  const map={
   "自动选择":"Rocket.png","AI自动选择":"ChatGPT.png","地区优选":"Global.png","出口检测":"Speedtest.png","PROXY":"Proxy.png","AI":"ChatGPT.png","YouTube":"YouTube.png","Emby":"Emby.png","TikTok":"TikTok.png",
   "Netflix":"Netflix.png","Disney":"Disney.png","Spotify":"Spotify.png","GitHub":"GitHub.png","Telegram":"Telegram.png",
@@ -583,16 +583,16 @@ const FREE_COUNTRY_META={
 };
 function freeProviderId(code,kind="general"){return `FREE-${code}-${kind.toUpperCase()}`}
 function freeProviderUrl(code){
- return `https://raw.githubusercontent.com/Au1rxx/free-vpn-subscriptions/main/output/by-country/clash-${code}.yaml`;
+ return `https://cdn.jsdelivr.net/gh/Au1rxx/free-vpn-subscriptions@main/output/by-country/clash-${code}.yaml`;
 }
 // 多源合并：主源 Au1rxx（按国家）之外，再并入 4 个公共链接源（无国家归属）。
 // 与主源一样走 mihomo proxy-provider：客户端分别拉取、在同一批 url-test 组里
 // 一起测活竞速。这些源是 vless/vmess/trojan/ss 等链接列表，mihomo 可直接解析。
 const FREE_MIX_SOURCES=[
- {key:"ermaozi",label:"ermaozi",url:"https://raw.githubusercontent.com/ermaozi/get_subscribe/main/subscribe/v2ray.txt"},
- {key:"cbusifab",label:"cbusifabcap",url:"https://raw.githubusercontent.com/cbusifabcap/daily_free_vpn/main/Z.txt"},
- {key:"leilao",label:"LeilaoMi真测",url:"https://raw.githubusercontent.com/LeilaoMi/AutoMergePublicNodes-Optimized/main/output/global.urls"},
- {key:"aliilapro",label:"ALIILAPRO",url:"https://raw.githubusercontent.com/ALIILAPRO/v2rayNG-Config/main/sub.txt"}
+ {key:"ermaozi",label:"ermaozi",url:"https://cdn.jsdelivr.net/gh/ermaozi/get_subscribe@main/subscribe/v2ray.txt"},
+ {key:"cbusifab",label:"cbusifabcap",url:"https://cdn.jsdelivr.net/gh/cbusifabcap/daily_free_vpn@main/Z.txt"},
+ {key:"leilao",label:"LeilaoMi真测",url:"https://cdn.jsdelivr.net/gh/LeilaoMi/AutoMergePublicNodes-Optimized@main/output/global.urls"},
+ {key:"aliilapro",label:"ALIILAPRO",url:"https://cdn.jsdelivr.net/gh/ALIILAPRO/v2rayNG-Config@main/sub.txt"}
 ];
 function mixProviderId(srcKey,kind="general",prefix="FREE-MIX"){return `${prefix}-${srcKey.toUpperCase()}-${kind.toUpperCase()}`}
 function appendOneMixProvider(a,o,src,kind,prefix="FREE-MIX",seg="free-mix",icon="🌐"){
@@ -937,7 +937,7 @@ function clashGroupsAndRules(names,o){
  a.push('      - "♻️ 自动选择"','      - "🌎 WARP可手动"','      - "🎯 全球直连"');
 
  groupHeader(a,"Ⓜ️ 微软服务");
- a.push("    proxies:",'      - "🎯 全球直连"','      - "🚀 节点选择"');
+ a.push("    proxies:",'      - "🚀 节点选择"','      - "🎯 全球直连"');
  if(freeOn)appendCountryChoices(a,o);
  a.push('      - "♻️ 自动选择"','      - "🌎 WARP可手动"');
 
@@ -973,17 +973,17 @@ function clashGroupsAndRules(names,o){
    a.push(
      "","rule-providers:",
      "  cn:","    type: http","    behavior: domain","    format: mrs","    interval: 43200",
-     "    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/cn.mrs"
+     "    url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/cn.mrs"
    );
    if(freeOn&&o.freeUseWarp)a.push('    proxy: "WARP中转"');
    a.push(
      "  cn_ip:","    type: http","    behavior: ipcidr","    format: mrs","    interval: 43200",
-     "    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo-lite/geoip/cn.mrs"
+     "    url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo-lite/geoip/cn.mrs"
    );
    if(freeOn&&o.freeUseWarp)a.push('    proxy: "WARP中转"');
    a.push(
      "  youtube:","    type: http","    behavior: domain","    format: mrs","    interval: 43200",
-     "    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/youtube.mrs"
+     "    url: https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@meta/geo/geosite/youtube.mrs"
    );
    if(freeOn&&o.freeUseWarp)a.push('    proxy: "WARP中转"');
    a.push(
@@ -1115,10 +1115,10 @@ function buildShadowrocket(){
 
 function singRuleSet(tag,kind="geosite"){
  const repo=kind==="geosite"?"sing-geosite":"sing-geoip";
- return {type:"remote",tag:`${kind}-${tag}`,format:"binary",url:`https://raw.githubusercontent.com/SagerNet/${repo}/rule-set/${kind}-${tag}.srs`,http_client:"rule-download",update_interval:"1d"};
+ return {type:"remote",tag:`${kind}-${tag}`,format:"binary",url:`https://cdn.jsdelivr.net/gh/SagerNet/${repo}@rule-set/${kind}-${tag}.srs`,http_client:"rule-download",update_interval:"1d"};
 }
 function buildSingbox(){
- const rs=[singRuleSet("category-ads-all"),singRuleSet("cn"),singRuleSet("geolocation-!cn"),singRuleSet("category-ai-!cn"),singRuleSet("youtube"),singRuleSet("google"),singRuleSet("telegram"),singRuleSet("netflix"),singRuleSet("github"),singRuleSet("private","geoip"),singRuleSet("cn","geoip")];
+ const rs=[singRuleSet("category-ads-all"),singRuleSet("cn"),singRuleSet("geolocation-!cn"),singRuleSet("category-ai-!cn"),singRuleSet("youtube"),singRuleSet("google"),singRuleSet("telegram"),singRuleSet("netflix"),singRuleSet("github"),singRuleSet("private"),singRuleSet("cn","geoip")];
  return JSON.stringify({
   "$schema":"https://sing-box.sagernet.org/schema.json",
   log:{level:"info",timestamp:true},
@@ -1128,7 +1128,8 @@ function buildSingbox(){
   outbounds:[{type:"socks",tag:"WARP-USQUE",server:"127.0.0.1",server_port:1080,version:"5"},{type:"direct",tag:"direct"}],
   route:{auto_detect_interface:true,default_domain_resolver:"local-dns",default_http_client:"rule-download",rule_set:rs,rules:[
    {rule_set:"geosite-category-ads-all",action:"reject"},
-   {rule_set:"geoip-private",action:"route",outbound:"direct"},
+   {ip_cidr:["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16","127.0.0.0/8","::1/128","fc00::/7","fe80::/10"],action:"route",outbound:"direct"},
+   {rule_set:"geosite-private",action:"route",outbound:"direct"},
    {rule_set:["geosite-cn","geoip-cn"],action:"route",outbound:"direct"},
    {rule_set:["geosite-category-ai-!cn","geosite-youtube","geosite-google","geosite-telegram","geosite-netflix","geosite-github","geosite-geolocation-!cn"],action:"route",outbound:"WARP-USQUE"}
   ],final:"WARP-USQUE"},experimental:{cache_file:{enabled:true}}
@@ -1416,7 +1417,7 @@ $("fmtClash").addEventListener("click",()=>{try{setFormat("clash");toast(`Clash 
 $("fmtShadowrocket").addEventListener("click",()=>{try{setFormat("shadowrocket");toast(`Shadowrocket 配置已生成，共 ${connectionPairs().length} 个节点。`,"success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
 $("fmtSingbox").addEventListener("click",()=>{try{setFormat("singbox");toast("sing-box 兼容配置已生成。","success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
 $("fmtVless").addEventListener("click",()=>{try{setFormat("vless");toast("VLESS 本地桥接配置已生成。","success","格式已生成")}catch(e){toast(e.message,"error","生成失败")}});
-const PANEL_VERSION="6.28";
+const PANEL_VERSION="6.29";
 function versionNewer(a,b){
  const pa=String(a).replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);
  const pb=String(b).replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);
